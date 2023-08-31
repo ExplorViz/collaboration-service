@@ -4,5 +4,6 @@ export type ComponentUpdateMessage = {
     appId: string,
     componentId: string,
     opened: boolean,
-    foundation: boolean
+    foundation: boolean,
+    messageId: number
 };

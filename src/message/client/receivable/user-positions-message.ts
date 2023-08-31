@@ -6,5 +6,6 @@ export const USER_POSITIONS_EVENT = 'user_positions';
 export type UserPositionsMessage = {
     controller1: ControllerPose,
     controller2: ControllerPose,
-    camera: Pose
+    camera: Pose,
+    messageId: number
 };
