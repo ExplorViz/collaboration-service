@@ -83,10 +83,6 @@ import {
 } from 'src/message/client/receivable/user-positions-message';
 import { MenuDetachedForwardMessage } from 'src/message/client/sendable/menu-detached-forward-message';
 import {
-  TIMESTAMP_UPDATE_TIMER_EVENT,
-  TimestampUpdateTimerMessage,
-} from 'src/message/client/sendable/timestamp-update-timer-message';
-import {
   USER_CONNECTED_EVENT,
   UserConnectedMessage,
 } from 'src/message/client/sendable/user-connected-message';
@@ -176,9 +172,6 @@ export class SubscriberService {
     );
     listener.set(USER_POSITIONS_EVENT, (msg: any) =>
       this.handleUserPositionsEvent(USER_POSITIONS_EVENT, msg),
-    );
-    listener.set(TIMESTAMP_UPDATE_TIMER_EVENT, (msg: any) =>
-      this.handleTimestampUpdateTimerEvent(TIMESTAMP_UPDATE_TIMER_EVENT, msg),
     );
     listener.set(OBJECT_MOVED_EVENT, (msg: any) =>
       this.handleObjectMovedEvent(OBJECT_MOVED_EVENT, msg),
@@ -640,17 +633,6 @@ export class SubscriberService {
       originalMessage: message,
     });
     this.websocketGateway;
-  }
-
-  private handleTimestampUpdateTimerEvent(
-    event: string,
-    roomMessage: RoomStatusMessage<TimestampUpdateTimerMessage>,
-  ) {
-    this.websocketGateway.sendBroadcastMessage(
-      event,
-      roomMessage.roomId,
-      roomMessage.message,
-    );
   }
 
   private handleObjectMovedEvent(

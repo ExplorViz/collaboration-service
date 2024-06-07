@@ -7,7 +7,6 @@ import {
   InitialLandscapeMessage,
 } from 'src/message/client/sendable/initial-landscape-message';
 import { SelfConnectedMessage } from 'src/message/client/sendable/self-connected-message';
-import { TimestampUpdateTimerMessage } from 'src/message/client/sendable/timestamp-update-timer-message';
 import { RoomForwardMessage } from 'src/message/pubsub/room-forward-message';
 import { RoomStatusMessage } from 'src/message/pubsub/room-status-message';
 import { HighlightingModel } from 'src/model/highlighting-model';
@@ -173,11 +172,5 @@ export class MessageFactoryService {
       detachedMenus: detachedMenuArray,
       highlightedExternCommunicationLinks: externCommunicationLinks,
     };
-  }
-
-  makeTimestampUpdateTimerMessage(room: Room): TimestampUpdateTimerMessage {
-    const timestamp = new Date().getTime() - 60000;
-    room.getLandscapeModifier().updateTimestamp(timestamp);
-    return { timestamp };
   }
 }
