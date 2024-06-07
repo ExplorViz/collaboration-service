@@ -7,20 +7,12 @@ import { RoomForwardMessage } from 'src/message/pubsub/room-forward-message';
 import { RoomStatusMessage } from 'src/message/pubsub/room-status-message';
 import { Redis } from 'ioredis';
 import { RedisService } from '@liaoliaots/nestjs-redis';
-import { LockService } from 'src/lock/lock.service';
-import { MessageFactoryService } from 'src/factory/message-factory/message-factory.service';
-import { RoomService } from 'src/room/room.service';
 
 @Injectable()
 export class PublisherService {
   private readonly redis: Redis;
 
-  constructor(
-    private readonly redisService: RedisService,
-    private readonly lockService: LockService,
-    private readonly roomService: RoomService,
-    private readonly messageFactoryService: MessageFactoryService,
-  ) {
+  constructor(private readonly redisService: RedisService) {
     this.redis = this.redisService.getClient().duplicate();
   }
 
