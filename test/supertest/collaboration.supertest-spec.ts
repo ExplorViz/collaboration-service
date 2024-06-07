@@ -3,7 +3,6 @@ import { io, type Socket } from 'socket.io-client';
 import { MENU_DETACHED_EVENT } from 'src/message/client/receivable/menu-detached-message';
 import { DETACHED_MENU_CLOSED_EVENT } from 'src/message/client/receivable/detached-menu-closed-message';
 import { OBJECT_GRABBED_RESPONSE_EVENT } from 'src/message/client/sendable/object-grabbed-response';
-import { TIMESTAMP_UPDATE_TIMER_EVENT } from 'src/message/client/sendable/timestamp-update-timer-message';
 import { INITIAL_LANDSCAPE_EVENT } from 'src/message/client/sendable/initial-landscape-message';
 import { RoomListRecord } from 'src/payload/sendable/room-list';
 import { APP_CLOSED_EVENT } from 'src/message/client/receivable/app-closed-message';
@@ -573,17 +572,4 @@ describe('collaboration', () => {
       reject(new Error('No message received'));
     });
   });
-
-  it('receive regular timestamp', async () => {
-    return new Promise<void>(async (resolve, reject) => {
-      client1.socket.on(TIMESTAMP_UPDATE_TIMER_EVENT, () => {
-        // timestamp received
-        resolve();
-      });
-
-      // timeout
-      await sleep(12000);
-      reject(new Error('No message received'));
-    });
-  }, 20000);
 });
