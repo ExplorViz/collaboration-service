@@ -1,4 +1,7 @@
-import { PublishedDetachedMenu } from 'src/message/pubsub/create-room-message';
+import {
+  PublishedAnnotation,
+  PublishedDetachedMenu,
+} from 'src/message/pubsub/create-room-message';
 import { App, Landscape } from 'src/payload/receivable/initial-room';
 import { HighlightingObject } from '../sendable/initial-landscape-message';
 
@@ -8,5 +11,6 @@ export type SyncRoomStateMessage = {
   landscape: Landscape;
   openApps: App[];
   detachedMenus: PublishedDetachedMenu[];
+  annotations: PublishedAnnotation[];
   highlightedExternCommunicationLinks: HighlightingObject[];
 };

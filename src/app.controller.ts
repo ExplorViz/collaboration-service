@@ -16,6 +16,7 @@ import { RoomCreatedResponse } from './payload/sendable/room-created';
 import { LobbyJoinedResponse } from './payload/sendable/lobby-joined';
 import { IdGenerationService } from './id-generation/id-generation.service';
 import {
+  PublishedAnnotation,
   PublishedDetachedMenu,
   PublishedLandscape,
 } from './message/pubsub/create-room-message';
@@ -81,6 +82,15 @@ export class AppController {
       });
     }
 
+    const annotations: PublishedAnnotation[] = [];
+    for (const annotation of body.annotations) {
+      const id = await this.idGenerationService.nextId();
+      annotations.push({
+        id: id,
+        menu: annotation,
+      });
+    }
+
     const landscape: PublishedLandscape = {
       id: landscapeId,
       landscape: body.landscape,
@@ -92,6 +102,7 @@ export class AppController {
         landscape: landscape,
         openApps: body.openApps,
         detachedMenus: detachedMenus,
+        annotations: annotations,
       },
     });
 

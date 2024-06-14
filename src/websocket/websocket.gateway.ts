@@ -17,6 +17,14 @@ import {
   AllHighlightsResetMessage,
 } from 'src/message/client/receivable/all-highlights-reset-message';
 import {
+  ANNOTATION_CLOSED_EVENT,
+  AnnotationClosedMessage,
+} from 'src/message/client/receivable/annotation-closed-message';
+import {
+  ANNOTATION_OPENED_EVENT,
+  AnnotationOpenedMessage,
+} from 'src/message/client/receivable/annotation-opened-message';
+import {
   APP_CLOSED_EVENT,
   AppClosedMessage,
 } from 'src/message/client/receivable/app-closed-message';
@@ -104,6 +112,10 @@ import {
   VISUALIZATION_MODE_UPDATE_EVENT,
   VisualizationModeUpdateMessage,
 } from 'src/message/client/receivable/visualization-mode-update';
+import {
+  ANNOTATION_RESPONSE_EVENT,
+  AnnotationResponse,
+} from 'src/message/client/sendable/annotation-response';
 import { ForwardedMessage } from 'src/message/client/sendable/forwarded-message';
 import { INITIAL_LANDSCAPE_EVENT } from 'src/message/client/sendable/initial-landscape-message';
 import {
@@ -460,6 +472,28 @@ export class WebsocketGateway
     const response: MenuDetachedResponse = { objectId: id };
     this.sendResponse(
       MENU_DETACHED_RESPONSE_EVENT,
+      client,
+      message.nonce,
+      response,
+    );
+  }
+
+  @SubscribeMessage(ANNOTATION_OPENED_EVENT)
+  async handleAnnotationOpenedMessage(
+    @MessageBody() message: AnnotationOpenedMessage,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const id = await this.idGenerationService.nextId();
+    const roomMessage = this.messageFactoryService.makeRoomForwardMessage<
+      PublishIdMessage<AnnotationOpenedMessage>
+    >(client, { id: id, message: message });
+    this.publisherService.publishRoomForwardMessage(
+      ANNOTATION_OPENED_EVENT,
+      roomMessage,
+    );
+    const response: AnnotationResponse = { objectId: id };
+    this.sendResponse(
+      ANNOTATION_RESPONSE_EVENT,
       client,
       message.nonce,
       response,
@@ -872,6 +906,45 @@ export class WebsocketGateway
         );
       this.publisherService.publishRoomForwardMessage(
         DETACHED_MENU_CLOSED_EVENT,
+        roomMessage,
+      );
+    }
+
+    const response: ObjectClosedResponse = { isSuccess: success };
+    this.sendResponse(
+      OBJECT_CLOSED_RESPONSE_EVENT,
+      client,
+      message.nonce,
+      response,
+    );
+  }
+
+  @SubscribeMessage(ANNOTATION_CLOSED_EVENT)
+  async handleAnnotationClosedMessage(
+    @MessageBody() message: AnnotationClosedMessage,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const session = this.sessionService.lookupSession(client);
+    const object = session
+      .getRoom()
+      .getGrabModifier()
+      .getGrabbableObject(message.menuId);
+    let success = true;
+    if (object) {
+      success = await this.lockService.closeGrabbableObject(
+        session.getRoom(),
+        object,
+      );
+    }
+
+    if (success) {
+      const roomMessage =
+        this.messageFactoryService.makeRoomForwardMessage<AnnotationClosedMessage>(
+          client,
+          message,
+        );
+      this.publisherService.publishRoomForwardMessage(
+        ANNOTATION_CLOSED_EVENT,
         roomMessage,
       );
     }
