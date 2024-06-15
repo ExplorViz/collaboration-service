@@ -22,6 +22,7 @@ export class AnnotationModifier {
     menuId: string | undefined,
     annotationTitle: string,
     annotationText: string,
+    owner: string,
   ) {
     const menu: AnnotationModel = new AnnotationModel(
       annotationId,
@@ -31,6 +32,7 @@ export class AnnotationModifier {
       annotationText,
       objectId,
       userId,
+      owner,
     );
     this.annotations.set(objectId, menu);
     this.grabModifier.addGrabbableObject(menu);

@@ -12,6 +12,7 @@ export class AnnotationModel
   private annotationTitle: string;
   private annotationText: string;
   private userId: string;
+  private owner: string;
 
   constructor(
     annotationId: number,
@@ -21,6 +22,7 @@ export class AnnotationModel
     annotationText: string,
     objectId: string,
     userId: string,
+    owner: string,
   ) {
     super(objectId);
     this.annotationId = annotationId;
@@ -29,6 +31,7 @@ export class AnnotationModel
     this.annotationTitle = annotationTitle;
     this.annotationText = annotationText;
     this.userId = userId;
+    this.owner = owner;
   }
 
   getAnnotationId(): number {
@@ -83,6 +86,14 @@ export class AnnotationModel
 
   setUserId(userId: string): void {
     this.userId = userId;
+  }
+
+  getOwner(): string {
+    return this.owner;
+  }
+
+  setOwner(owner: string): void {
+    this.owner = owner;
   }
 
   getGrabId(): string {

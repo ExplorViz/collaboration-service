@@ -33,12 +33,9 @@ export type DetachedMenu = {
 export type Annotation = {
   annotationId: number;
   entityId: string | undefined;
-  entityType: string | undefined;
   menuId: string | undefined;
   annotationTitle: string;
   annotationText: string;
   userId: string;
-  position: number[];
-  quaternion: number[];
-  scale: number[];
+  owner: string;
 };

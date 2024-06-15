@@ -7,5 +7,6 @@ export type AnnotationOpenedMessage = {
   menuId: string | null;
   annotationTitle: string;
   annotationText: string;
+  owner: string;
   nonce: number;
 };

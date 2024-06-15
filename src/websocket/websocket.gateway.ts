@@ -25,6 +25,10 @@ import {
   AnnotationOpenedMessage,
 } from 'src/message/client/receivable/annotation-opened-message';
 import {
+  ANNOTATION_UPDATED_EVENT,
+  AnnotationUpdatedMessage,
+} from 'src/message/client/receivable/annotation-updated-message';
+import {
   APP_CLOSED_EVENT,
   AppClosedMessage,
 } from 'src/message/client/receivable/app-closed-message';
@@ -116,6 +120,10 @@ import {
   ANNOTATION_RESPONSE_EVENT,
   AnnotationResponse,
 } from 'src/message/client/sendable/annotation-response';
+import {
+  ANNOTATION_UPDATED_RESPONSE_EVENT,
+  AnnotationUpdatedResponse,
+} from 'src/message/client/sendable/annotation-updated-response';
 import { ForwardedMessage } from 'src/message/client/sendable/forwarded-message';
 import { INITIAL_LANDSCAPE_EVENT } from 'src/message/client/sendable/initial-landscape-message';
 import {
@@ -952,6 +960,29 @@ export class WebsocketGateway
     const response: ObjectClosedResponse = { isSuccess: success };
     this.sendResponse(
       OBJECT_CLOSED_RESPONSE_EVENT,
+      client,
+      message.nonce,
+      response,
+    );
+  }
+
+  @SubscribeMessage(ANNOTATION_UPDATED_EVENT)
+  async handleAnnotationUpdatedMessage(
+    @MessageBody() message: AnnotationUpdatedMessage,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const id = message.objectId;
+    const roomMessage = this.messageFactoryService.makeRoomForwardMessage<
+      PublishIdMessage<AnnotationUpdatedMessage>
+    >(client, { id: id, message: message });
+    this.publisherService.publishRoomForwardMessage(
+      ANNOTATION_UPDATED_EVENT,
+      roomMessage,
+    );
+
+    const response: AnnotationUpdatedResponse = { updated: true };
+    this.sendResponse(
+      ANNOTATION_UPDATED_RESPONSE_EVENT,
       client,
       message.nonce,
       response,

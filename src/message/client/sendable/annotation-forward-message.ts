@@ -6,4 +6,5 @@ export type AnnotationForwardMessage = {
   menuId: string | undefined;
   annotationTitle: string;
   annotationText: string;
+  owner: string;
 };
