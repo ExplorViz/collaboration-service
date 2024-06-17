@@ -5,5 +5,6 @@ export type AnnotationUpdatedMessage = {
   objectId: string;
   annotationTitle: string;
   annotationText: string;
+  lastEditor: string;
   nonce: number;
 };

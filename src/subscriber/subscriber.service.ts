@@ -288,6 +288,8 @@ export class SubscriberService {
           annotation.menu.annotationTitle,
           annotation.menu.annotationText,
           annotation.menu.owner,
+          annotation.menu.isEditable,
+          annotation.menu.lastEditor,
         );
     }
   }
@@ -356,6 +358,8 @@ export class SubscriberService {
           annotation.menu.annotationTitle,
           annotation.menu.annotationText,
           annotation.menu.owner,
+          annotation.menu.isEditable,
+          annotation.menu.lastEditor,
         );
     }
 
@@ -469,10 +473,12 @@ export class SubscriberService {
         message.userId,
         menu.annotationId,
         menu.entityId,
-        menu.menuId,
+        message.message.id,
         menu.annotationTitle,
         menu.annotationText,
         menu.owner,
+        !menu.inEdit,
+        menu.lastEditor,
       );
     const annotationForwardMessage: AnnotationForwardMessage = {
       objectId: message.message.id,
@@ -483,6 +489,7 @@ export class SubscriberService {
       annotationText: menu.annotationText,
       menuId: menu.menuId,
       owner: menu.owner,
+      lastEditor: menu.lastEditor,
     };
     this.websocketGateway.sendBroadcastExceptOneMessage(
       event,
@@ -821,7 +828,7 @@ export class SubscriberService {
     let annotation: AnnotationModel;
 
     for (const an of annotations) {
-      if (an.getAnnotationId() == message.annotationId) {
+      if (an.getMenuId() == message.objectId) {
         annotation = an;
         break;
       }
@@ -829,12 +836,15 @@ export class SubscriberService {
 
     annotation.setAnnotationTitle(message.annotationTitle);
     annotation.setAnnotationText(message.annotationText);
+    annotation.setLastEditor(message.lastEditor);
+    annotation.setIsEditable(true);
 
     const annotationUpdatedForwardMessage: AnnotationUpdatedForwardMessage = {
       objectId: message.objectId,
       annotationId: annotation.getAnnotationId(),
       annotationTitle: annotation.getAnnotationTitle(),
       annotationText: annotation.getAnnotationText(),
+      lastEditor: annotation.getLastEditor(),
     };
 
     this.websocketGateway.sendBroadcastExceptOneMessage(

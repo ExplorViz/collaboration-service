@@ -3,4 +3,5 @@ export type AnnotationUpdatedForwardMessage = {
   annotationId: number;
   annotationTitle: string;
   annotationText: string;
+  lastEditor: string;
 };

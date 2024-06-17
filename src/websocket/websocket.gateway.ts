@@ -21,6 +21,10 @@ import {
   AnnotationClosedMessage,
 } from 'src/message/client/receivable/annotation-closed-message';
 import {
+  ANNOTATION_EDIT_EVENT,
+  AnnotationEditMessage,
+} from 'src/message/client/receivable/annotation-edit-message';
+import {
   ANNOTATION_OPENED_EVENT,
   AnnotationOpenedMessage,
 } from 'src/message/client/receivable/annotation-opened-message';
@@ -117,6 +121,10 @@ import {
   VisualizationModeUpdateMessage,
 } from 'src/message/client/receivable/visualization-mode-update';
 import {
+  ANNOTATION_EDIT_RESPONSE_EVENT,
+  AnnotationEditResponse,
+} from 'src/message/client/sendable/annotation-edit-response-message';
+import {
   ANNOTATION_RESPONSE_EVENT,
   AnnotationResponse,
 } from 'src/message/client/sendable/annotation-response';
@@ -149,6 +157,7 @@ import {
   UserDisconnectedMessage,
 } from 'src/message/client/sendable/user-disconnected-message';
 import { PublishIdMessage } from 'src/message/pubsub/publish-id-message';
+import { AnnotationModel } from 'src/model/annotation-model';
 import { Room } from 'src/model/room-model';
 import { PublisherService } from 'src/publisher/publisher.service';
 import { RoomService } from 'src/room/room.service';
@@ -983,6 +992,47 @@ export class WebsocketGateway
     const response: AnnotationUpdatedResponse = { updated: true };
     this.sendResponse(
       ANNOTATION_UPDATED_RESPONSE_EVENT,
+      client,
+      message.nonce,
+      response,
+    );
+  }
+
+  @SubscribeMessage(ANNOTATION_EDIT_EVENT)
+  async handleAnnotationEditMessage(
+    @MessageBody() message: AnnotationEditMessage,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const id = message.objectId;
+    const roomMessage = this.messageFactoryService.makeRoomForwardMessage<
+      PublishIdMessage<AnnotationEditMessage>
+    >(client, { id: id, message: message });
+
+    // check if another user edits the annotation
+
+    const room = this.roomService.lookupRoom(roomMessage.roomId);
+    const annotations = room.getAnnotationModifier().getAnnotations();
+
+    let annotation: AnnotationModel;
+
+    for (const an of annotations) {
+      if (an.getMenuId() == message.objectId) {
+        annotation = an;
+        break;
+      }
+    }
+
+    let response: AnnotationEditResponse;
+
+    if (!annotation || !annotation.getIsEditable()) {
+      response = { isEditable: false };
+    } else {
+      annotation.setIsEditable(false);
+      response = { isEditable: true };
+    }
+
+    this.sendResponse(
+      ANNOTATION_EDIT_RESPONSE_EVENT,
       client,
       message.nonce,
       response,

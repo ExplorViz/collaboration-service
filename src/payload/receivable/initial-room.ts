@@ -38,4 +38,6 @@ export type Annotation = {
   annotationText: string;
   userId: string;
   owner: string;
+  isEditable: boolean;
+  lastEditor: string;
 };

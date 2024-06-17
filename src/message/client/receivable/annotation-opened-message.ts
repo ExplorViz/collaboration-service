@@ -8,5 +8,7 @@ export type AnnotationOpenedMessage = {
   annotationTitle: string;
   annotationText: string;
   owner: string;
+  inEdit: boolean;
+  lastEditor: string;
   nonce: number;
 };

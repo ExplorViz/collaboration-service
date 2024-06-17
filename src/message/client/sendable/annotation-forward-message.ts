@@ -7,4 +7,5 @@ export type AnnotationForwardMessage = {
   annotationTitle: string;
   annotationText: string;
   owner: string;
+  lastEditor: string;
 };
