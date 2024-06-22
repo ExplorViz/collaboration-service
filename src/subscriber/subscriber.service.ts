@@ -834,6 +834,10 @@ export class SubscriberService {
       }
     }
 
+    if (!annotation) {
+      return;
+    }
+
     annotation.setAnnotationTitle(message.annotationTitle);
     annotation.setAnnotationText(message.annotationText);
     annotation.setLastEditor(message.lastEditor);

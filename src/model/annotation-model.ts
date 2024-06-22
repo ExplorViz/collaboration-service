@@ -7,7 +7,6 @@ export class AnnotationModel
 {
   private annotationId: number;
   private entityId: string | undefined;
-  private entityType: string | undefined;
   private menuId: string | undefined;
   private annotationTitle: string;
   private annotationText: string;
@@ -56,7 +55,7 @@ export class AnnotationModel
   }
 
   setEntityId(entityId: string | undefined): void {
-    this.entityType = entityId;
+    this.entityId = entityId;
   }
 
   getMenuId(): string {
