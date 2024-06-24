@@ -989,6 +989,12 @@ export class WebsocketGateway
       roomMessage,
     );
 
+    const session = this.sessionService.lookupSession(client);
+    this.lockService.releaseGrabbableObjectLock(
+      session.getUser(),
+      message.objectId,
+    );
+
     const response: AnnotationUpdatedResponse = { updated: true };
     this.sendResponse(
       ANNOTATION_UPDATED_RESPONSE_EVENT,
@@ -1008,34 +1014,59 @@ export class WebsocketGateway
       PublishIdMessage<AnnotationEditMessage>
     >(client, { id: id, message: message });
 
-    // check if another user edits the annotation
+    const session = this.sessionService.lookupSession(client);
+    const object = session
+      .getRoom()
+      .getGrabModifier()
+      .getGrabbableObject(message.objectId);
+    let success = true;
+    if (object) {
+      success = await this.lockService.lockGrabbableObject(
+        session.getRoom(),
+        session.getUser(),
+        object,
+      );
+    }
 
-    const room = this.roomService.lookupRoom(roomMessage.roomId);
-    const annotations = room.getAnnotationModifier().getAnnotations();
+    if (success) {
+      // check if another user edits the annotation
 
-    let annotation: AnnotationModel;
+      const room = this.roomService.lookupRoom(roomMessage.roomId);
+      const annotations = room.getAnnotationModifier().getAnnotations();
 
-    for (const an of annotations) {
-      if (an.getMenuId() == message.objectId) {
-        annotation = an;
-        break;
+      let annotation: AnnotationModel;
+
+      for (const an of annotations) {
+        if (an.getMenuId() == message.objectId) {
+          annotation = an;
+          break;
+        }
       }
-    }
 
-    let response: AnnotationEditResponse;
+      let response: AnnotationEditResponse;
 
-    if (!annotation || !annotation.getIsEditable()) {
-      response = { isEditable: false };
+      if (!annotation || !annotation.getIsEditable()) {
+        response = { isEditable: false };
+      } else {
+        annotation.setIsEditable(false);
+        response = { isEditable: true };
+      }
+
+      this.sendResponse(
+        ANNOTATION_EDIT_RESPONSE_EVENT,
+        client,
+        message.nonce,
+        response,
+      );
     } else {
-      annotation.setIsEditable(false);
-      response = { isEditable: true };
-    }
+      const response = { isEditable: false };
 
-    this.sendResponse(
-      ANNOTATION_EDIT_RESPONSE_EVENT,
-      client,
-      message.nonce,
-      response,
-    );
+      this.sendResponse(
+        ANNOTATION_EDIT_RESPONSE_EVENT,
+        client,
+        message.nonce,
+        response,
+      );
+    }
   }
 }
