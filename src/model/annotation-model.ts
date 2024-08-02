@@ -12,7 +12,6 @@ export class AnnotationModel
   private annotationText: string;
   private userId: string;
   private owner: string;
-  private isEditable: boolean;
   private lastEdtior: string;
 
   constructor(
@@ -24,7 +23,6 @@ export class AnnotationModel
     objectId: string,
     userId: string,
     owner: string,
-    isEditable: boolean,
     lastEditor: string,
   ) {
     super(objectId);
@@ -35,7 +33,6 @@ export class AnnotationModel
     this.annotationText = annotationText;
     this.userId = userId;
     this.owner = owner;
-    this.isEditable = isEditable;
     this.lastEdtior = lastEditor;
   }
 
@@ -99,14 +96,6 @@ export class AnnotationModel
 
   setOwner(owner: string): void {
     this.owner = owner;
-  }
-
-  getIsEditable(): boolean {
-    return this.isEditable;
-  }
-
-  setIsEditable(isEditable: boolean): void {
-    this.isEditable = isEditable;
   }
 
   getLastEditor(): string {

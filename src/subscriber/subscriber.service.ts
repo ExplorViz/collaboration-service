@@ -288,7 +288,6 @@ export class SubscriberService {
           annotation.menu.annotationTitle,
           annotation.menu.annotationText,
           annotation.menu.owner,
-          annotation.menu.isEditable,
           annotation.menu.lastEditor,
         );
     }
@@ -358,7 +357,6 @@ export class SubscriberService {
           annotation.menu.annotationTitle,
           annotation.menu.annotationText,
           annotation.menu.owner,
-          annotation.menu.isEditable,
           annotation.menu.lastEditor,
         );
     }
@@ -477,7 +475,6 @@ export class SubscriberService {
         menu.annotationTitle,
         menu.annotationText,
         menu.owner,
-        !menu.inEdit,
         menu.lastEditor,
       );
     const annotationForwardMessage: AnnotationForwardMessage = {
@@ -841,7 +838,6 @@ export class SubscriberService {
     annotation.setAnnotationTitle(message.annotationTitle);
     annotation.setAnnotationText(message.annotationText);
     annotation.setLastEditor(message.lastEditor);
-    annotation.setIsEditable(true);
 
     const annotationUpdatedForwardMessage: AnnotationUpdatedForwardMessage = {
       objectId: message.objectId,

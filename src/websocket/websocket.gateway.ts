@@ -120,10 +120,7 @@ import {
   VISUALIZATION_MODE_UPDATE_EVENT,
   VisualizationModeUpdateMessage,
 } from 'src/message/client/receivable/visualization-mode-update';
-import {
-  ANNOTATION_EDIT_RESPONSE_EVENT,
-  AnnotationEditResponse,
-} from 'src/message/client/sendable/annotation-edit-response-message';
+import { ANNOTATION_EDIT_RESPONSE_EVENT } from 'src/message/client/sendable/annotation-edit-response-message';
 import {
   ANNOTATION_RESPONSE_EVENT,
   AnnotationResponse,
@@ -157,7 +154,6 @@ import {
   UserDisconnectedMessage,
 } from 'src/message/client/sendable/user-disconnected-message';
 import { PublishIdMessage } from 'src/message/pubsub/publish-id-message';
-import { AnnotationModel } from 'src/model/annotation-model';
 import { Room } from 'src/model/room-model';
 import { PublisherService } from 'src/publisher/publisher.service';
 import { RoomService } from 'src/room/room.service';
@@ -1009,11 +1005,6 @@ export class WebsocketGateway
     @MessageBody() message: AnnotationEditMessage,
     @ConnectedSocket() client: Socket,
   ) {
-    const id = message.objectId;
-    const roomMessage = this.messageFactoryService.makeRoomForwardMessage<
-      PublishIdMessage<AnnotationEditMessage>
-    >(client, { id: id, message: message });
-
     const session = this.sessionService.lookupSession(client);
     const object = session
       .getRoom()
@@ -1029,28 +1020,7 @@ export class WebsocketGateway
     }
 
     if (success) {
-      // check if another user edits the annotation
-
-      const room = this.roomService.lookupRoom(roomMessage.roomId);
-      const annotations = room.getAnnotationModifier().getAnnotations();
-
-      let annotation: AnnotationModel;
-
-      for (const an of annotations) {
-        if (an.getMenuId() == message.objectId) {
-          annotation = an;
-          break;
-        }
-      }
-
-      let response: AnnotationEditResponse;
-
-      if (!annotation || !annotation.getIsEditable()) {
-        response = { isEditable: false };
-      } else {
-        annotation.setIsEditable(false);
-        response = { isEditable: true };
-      }
+      const response = { isEditable: true };
 
       this.sendResponse(
         ANNOTATION_EDIT_RESPONSE_EVENT,
