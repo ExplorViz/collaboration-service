@@ -12,6 +12,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { LockService } from './lock/lock.service';
 import { PublisherService } from './publisher/publisher.service';
 import { SubscriberService } from './subscriber/subscriber.service';
+import { MongooseModule } from '@nestjs/mongoose';
+import { SpectateConfigsModule } from './persistence/spectateConfiguration/spectateConfigs.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { SubscriberService } from './subscriber/subscriber.service';
       },
     }),
     ScheduleModule.forRoot(),
+    MongooseModule.forRoot('mongodb://127.0.0.1:27018/collab_db'),
+    SpectateConfigsModule,
   ],
   controllers: [AppController],
   providers: [
