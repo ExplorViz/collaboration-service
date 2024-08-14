@@ -14,6 +14,7 @@ async function bootstrap() {
       console.log(config);
       await spectateConfigService.create({
         id: config.id,
+        user: config.user,
         devices: config.devices,
       });
     });
@@ -21,17 +22,18 @@ async function bootstrap() {
 
   app.enableCors();
   await app.listen(port);
-  console.log(await app.getUrl());
 }
 bootstrap();
 
 const initialData = [
   {
     id: 'default',
+    user: 'system',
     devices: [],
   },
   {
     id: 'arena-2',
+    user: 'system',
     devices: [
       {
         deviceId: 'main',
@@ -94,6 +96,7 @@ const initialData = [
   },
   {
     id: 'fhd-monitors',
+    user: 'system',
     devices: [
       {
         deviceId: 'main',

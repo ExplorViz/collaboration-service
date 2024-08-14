@@ -12,5 +12,6 @@ import { SpectateConfigController } from './spectateConfig.controller';
   ],
   controllers: [SpectateConfigController],
   providers: [SpectateConfigsService],
+  exports: [SpectateConfigsService],
 })
 export class SpectateConfigsModule {}

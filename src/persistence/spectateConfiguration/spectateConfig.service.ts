@@ -20,4 +20,12 @@ export class SpectateConfigsService {
   async getAllConfigs(): Promise<SpectateConfig[]> {
     return await this.spectateConfigModel.find().exec();
   }
+
+  async getConfigById(id: string): Promise<SpectateConfig[]> {
+    return await this.spectateConfigModel.find({ id: id }).exec();
+  }
+
+  async deleteConfigById(id: string): Promise<number> {
+    return (await this.spectateConfigModel.deleteOne({ id: id })).deletedCount;
+  }
 }

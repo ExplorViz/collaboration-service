@@ -9,10 +9,14 @@ export class SpectateConfig {
   id: string;
 
   @Prop()
+  user: string;
+
+  @Prop()
   devices: { deviceId: string; projectionMatrix: number[] }[];
 }
 
 export const SpectateConfigSchema = new mongoose.Schema({
   id: String,
+  user: String,
   devices: [{ deviceId: String, projectionMatrix: [Number] }],
 });
