@@ -130,6 +130,7 @@ import {
 } from 'src/message/client/sendable/user-disconnected-message';
 import { PublishIdMessage } from 'src/message/pubsub/publish-id-message';
 import { Room } from 'src/model/room-model';
+import { SpectateConfigsService } from 'src/persistence/spectateConfiguration/spectateConfig.service';
 import { PublisherService } from 'src/publisher/publisher.service';
 import { RoomService } from 'src/room/room.service';
 import { SessionService } from 'src/session/session.service';
@@ -150,6 +151,7 @@ export class WebsocketGateway
     private readonly idGenerationService: IdGenerationService,
     private readonly lockService: LockService,
     private readonly publisherService: PublisherService,
+    private readonly spectateConfigService: SpectateConfigsService,
   ) {}
 
   @WebSocketServer()
@@ -627,10 +629,10 @@ export class WebsocketGateway
   }
 
   @SubscribeMessage(SPECTATING_UPDATE_EVENT)
-  handleSpectatingUpdateMessage(
+  async handleSpectatingUpdateMessage(
     @MessageBody() message: SpectatingUpdateMessage,
     @ConnectedSocket() client: Socket,
-  ): void {
+  ): Promise<void> {
     const session = this.sessionService.lookupSession(client);
     const roomId = session.getRoom().getRoomId();
 
@@ -650,13 +652,15 @@ export class WebsocketGateway
       });
     }
 
-    const spectateConfig: { deviceId: string; projectionMatrix: number[] }[] =
-      JSON.parse(
-        fs.readFileSync(
-          'src/config/spectate/' + message.configurationId + '.json',
-          'utf8',
-        ),
-      );
+    const config = await this.spectateConfigService.getConfigById(
+      message.configurationId,
+    );
+
+    const spectateConfig = {
+      id: config[0].id,
+      devices: config[0].devices,
+    };
+
     message.configuration = spectateConfig;
 
     const roomMessage =
