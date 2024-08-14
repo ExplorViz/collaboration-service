@@ -7,7 +7,6 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import * as fs from 'node:fs';
 import { Server, Socket } from 'socket.io';
 import { MessageFactoryService } from 'src/factory/message-factory/message-factory.service';
 import { IdGenerationService } from 'src/id-generation/id-generation.service';
