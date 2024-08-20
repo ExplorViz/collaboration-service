@@ -25,7 +25,9 @@ import { SpectateConfigsModule } from './persistence/spectateConfiguration/spect
       },
     }),
     ScheduleModule.forRoot(),
-    MongooseModule.forRoot('mongodb://127.0.0.1:27018/collab_db'),
+    MongooseModule.forRoot(
+      process.env.MONGO_URI || 'mongodb://127.0.0.1:27018/collab_db',
+    ),
     SpectateConfigsModule,
   ],
   controllers: [AppController],

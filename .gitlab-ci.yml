@@ -41,10 +41,10 @@ test:
   variables:
     REDIS_HOST: redis
     REDIS_PORT: '6379'
+    MONGO_URI: 'mongodb://mongo/collab_db'
   services:
     - name: redis:latest
     - name: mongo:latest
-      command: ['--port', '27018', '--https-port', '27017', '--verbose']
   script:
     - npm run start &
     - sleep 10
