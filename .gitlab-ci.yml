@@ -43,10 +43,10 @@ test:
     REDIS_PORT: '6379'
   services:
     - name: redis:latest
-    mongodb:
-      image: mongo:latest
-      ports:
-        - 27018:27017
+    - mongodb:
+        image: mongo:latest
+        ports:
+          - 27018:27017
   script:
     - npm run start &
     - sleep 10
