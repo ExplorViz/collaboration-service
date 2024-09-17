@@ -1,3 +1,4 @@
+import { Inject } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -129,7 +130,7 @@ import {
 } from 'src/message/client/sendable/user-disconnected-message';
 import { PublishIdMessage } from 'src/message/pubsub/publish-id-message';
 import { Room } from 'src/model/room-model';
-import { SpectateConfigsService } from 'src/persistence/spectateConfiguration/spectateConfig.service';
+import { SpectateConfigInterface } from 'src/persistence/spectateConfiguration/spectateConfig.interface';
 import { PublisherService } from 'src/publisher/publisher.service';
 import { RoomService } from 'src/room/room.service';
 import { SessionService } from 'src/session/session.service';
@@ -150,7 +151,7 @@ export class WebsocketGateway
     private readonly idGenerationService: IdGenerationService,
     private readonly lockService: LockService,
     private readonly publisherService: PublisherService,
-    private readonly spectateConfigService: SpectateConfigsService,
+    @Inject('SpectateConfigInterface') private readonly spectateConfigService: SpectateConfigInterface,
   ) {}
 
   @WebSocketServer()

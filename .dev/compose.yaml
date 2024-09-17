@@ -5,6 +5,6 @@ services:
       - '6379:6379'
 
   mongoDB:
-    image: mongo:latest
-    ports:
-      - '27018:27017'
+   image: mongo:latest
+   ports:
+     - '27018:27017'
