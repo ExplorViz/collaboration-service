@@ -131,6 +131,7 @@ import {
 import { PublishIdMessage } from 'src/message/pubsub/publish-id-message';
 import { Room } from 'src/model/room-model';
 import { SpectateConfigInterface } from 'src/persistence/spectateConfiguration/spectateConfig.interface';
+import { SpectateConfigsService } from 'src/persistence/spectateConfiguration/spectateConfig.service';
 import { PublisherService } from 'src/publisher/publisher.service';
 import { RoomService } from 'src/room/room.service';
 import { SessionService } from 'src/session/session.service';
@@ -625,16 +626,18 @@ export class WebsocketGateway
       });
     }
 
-    const config = await this.spectateConfigService.getConfigById(
-      message.configurationId,
-    );
+    if (this.spectateConfigService instanceof SpectateConfigsService) {
+      const config = await this.spectateConfigService.getConfigById(
+        message.configurationId,
+      );
 
-    const spectateConfig = {
-      id: config[0].id,
-      devices: config[0].devices,
-    };
+      const spectateConfig = {
+        id: config[0].id,
+        devices: config[0].devices,
+      };
 
-    message.configuration = spectateConfig;
+      message.configuration = spectateConfig;
+    }
 
     const roomMessage =
       this.messageFactoryService.makeRoomForwardMessage<SpectatingUpdateMessage>(
