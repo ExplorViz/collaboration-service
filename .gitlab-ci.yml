@@ -22,7 +22,6 @@ workflow:
 
 stages:
   - build
-  - lint
   - test
   - deploy:images
 
@@ -37,7 +36,7 @@ build:
       - dist
 
 lint:
-  stage: lint
+  stage: test
   script:
     - npm run lint
 
