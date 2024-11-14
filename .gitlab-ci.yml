@@ -22,9 +22,9 @@ workflow:
 
 stages:
   - build
+  - lint
   - test
   - deploy:images
-  - deploy:retagging
 
 build:
   stage: build
@@ -35,6 +35,11 @@ build:
     paths:
       - node_modules
       - dist
+
+lint:
+  stage: lint
+  script:
+    - npm run lint
 
 test:
   stage: test
@@ -47,36 +52,6 @@ test:
     - npm run start &
     - sleep 10
     - npm run test
-
-deploy-main-amd64:
-  extends:
-    - .build-and-deploy
-  variables:
-    DOCKERHUB_TAG: 'amd64'
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_PIPELINE_SOURCE == "pipeline"'
-
-deploy-main-arm64:
-  extends:
-    - .build-and-deploy
-  tags:
-    - 'arm64'
-  variables:
-    DOCKERHUB_TAG: 'arm64'
-  rules:
-    - if: $MULTI_ARCH_BUILD || $ARM64_BUILD
-
-retag-amd64-as-latest::
-  extends: .retag-dockerhub-image
-  rules:
-    - if: $MULTI_ARCH_BUILD || $ARM64_BUILD
-      when: never
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_PIPELINE_SOURCE == "pipeline"'
-  variables:
-    SOURCE_TAG: 'amd64'
-    TARGET_TAG: 'latest'
 
 deploy-mr:
   variables:
