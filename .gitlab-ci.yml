@@ -60,6 +60,3 @@ deploy-mr:
     - .build-and-deploy
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
-
-publish-multi-arch-manifest:
-  extends: .retag-as-multi-arch-dockerhub-image
