@@ -60,7 +60,7 @@ jobs:
         with:
           node-version: '20'
   
-      - name: Run lintin
+      - name: Run linting
         run: npm run lint
   
   test:
