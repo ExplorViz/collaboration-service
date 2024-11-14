@@ -1,7 +1,7 @@
 {
-  "name": "collaboration-service-scalable",
-  "version": "0.0.1",
-  "description": "",
+  "name": "explorviz-collaboration-service",
+  "version": "1.0",
+  "description": "Service for collaboration in ExplorViz",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
