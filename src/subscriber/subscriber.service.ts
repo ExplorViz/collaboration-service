@@ -6,6 +6,18 @@ import {
   AllHighlightsResetMessage,
 } from 'src/message/client/receivable/all-highlights-reset-message';
 import {
+  ANNOTATION_CLOSED_EVENT,
+  AnnotationClosedMessage,
+} from 'src/message/client/receivable/annotation-closed-message';
+import {
+  ANNOTATION_OPENED_EVENT,
+  AnnotationOpenedMessage,
+} from 'src/message/client/receivable/annotation-opened-message';
+import {
+  ANNOTATION_UPDATED_EVENT,
+  AnnotationUpdatedMessage,
+} from 'src/message/client/receivable/annotation-updated-message';
+import {
   APP_CLOSED_EVENT,
   AppClosedMessage,
 } from 'src/message/client/receivable/app-closed-message';
@@ -89,6 +101,8 @@ import {
   USER_POSITIONS_EVENT,
   UserPositionsMessage,
 } from 'src/message/client/receivable/user-positions-message';
+import { AnnotationForwardMessage } from 'src/message/client/sendable/annotation-forward-message';
+import { AnnotationUpdatedForwardMessage } from 'src/message/client/sendable/annotation-updated-forward-message';
 import { MenuDetachedForwardMessage } from 'src/message/client/sendable/menu-detached-forward-message';
 import {
   USER_CONNECTED_EVENT,
@@ -105,6 +119,7 @@ import {
 import { PublishIdMessage } from 'src/message/pubsub/publish-id-message';
 import { RoomForwardMessage } from 'src/message/pubsub/room-forward-message';
 import { RoomStatusMessage } from 'src/message/pubsub/room-status-message';
+import { AnnotationModel } from 'src/model/annotation-model';
 import { UserModel } from 'src/model/user-model';
 import { RoomService } from 'src/room/room.service';
 import { WebsocketGateway } from 'src/websocket/websocket.gateway';
@@ -140,6 +155,9 @@ export class SubscriberService {
     );
     listener.set(MENU_DETACHED_EVENT, (msg: any) =>
       this.handleMenuDetachedEvent(MENU_DETACHED_EVENT, msg),
+    );
+    listener.set(ANNOTATION_OPENED_EVENT, (msg: any) =>
+      this.handleAnnotationEvent(ANNOTATION_OPENED_EVENT, msg),
     );
     listener.set(APP_OPENED_EVENT, (msg: any) =>
       this.handleAppOpenedEvent(APP_OPENED_EVENT, msg),
@@ -197,6 +215,12 @@ export class SubscriberService {
     );
     listener.set(DETACHED_MENU_CLOSED_EVENT, (msg: any) =>
       this.handleDetachedMenuClosedEvent(DETACHED_MENU_CLOSED_EVENT, msg),
+    );
+    listener.set(ANNOTATION_CLOSED_EVENT, (msg: any) =>
+      this.handleAnnotationClosedEvent(ANNOTATION_CLOSED_EVENT, msg),
+    );
+    listener.set(ANNOTATION_UPDATED_EVENT, (msg: any) =>
+      this.handleAnnotationUpdatedEvent(ANNOTATION_UPDATED_EVENT, msg),
     );
     listener.set(JOIN_VR_EVENT, (msg: any) =>
       this.handleJoinVrEvent(JOIN_VR_EVENT, msg),
@@ -271,6 +295,23 @@ export class SubscriberService {
           detachedMenu.menu.scale,
         );
     }
+
+    // Initialize annotations
+    for (const annotation of message.initialRoom.annotations) {
+      room
+        .getAnnotationModifier()
+        .annotation(
+          annotation.id,
+          annotation.menu.userId,
+          annotation.menu.annotationId,
+          annotation.menu.entityId,
+          annotation.menu.menuId,
+          annotation.menu.annotationTitle,
+          annotation.menu.annotationText,
+          annotation.menu.owner,
+          annotation.menu.lastEditor,
+        );
+    }
   }
 
   private handleSyncRoomStateEvent(
@@ -307,6 +348,8 @@ export class SubscriberService {
 
     room.getDetachedMenuModifier().closeAllDetachedMenus();
 
+    room.getAnnotationModifier().closeAllAnnotations();
+
     // Initialize detached menus
     for (const detachedMenu of roomMessage.message.detachedMenus) {
       room
@@ -319,6 +362,23 @@ export class SubscriberService {
           detachedMenu.menu.position,
           detachedMenu.menu.quaternion,
           detachedMenu.menu.scale,
+        );
+    }
+
+    // Initialize annotations
+    for (const annotation of roomMessage.message.annotations) {
+      room
+        .getAnnotationModifier()
+        .annotation(
+          annotation.id,
+          annotation.menu.userId,
+          annotation.menu.annotationId,
+          annotation.menu.entityId,
+          annotation.menu.menuId,
+          annotation.menu.annotationTitle,
+          annotation.menu.annotationText,
+          annotation.menu.owner,
+          annotation.menu.lastEditor,
         );
     }
 
@@ -418,6 +478,44 @@ export class SubscriberService {
       message.roomId,
       message.userId,
       menuDetachedForwardMessage,
+    );
+  }
+
+  private handleAnnotationEvent(
+    event: string,
+    message: RoomForwardMessage<PublishIdMessage<AnnotationOpenedMessage>>,
+  ) {
+    const room = this.roomService.lookupRoom(message.roomId);
+    const menu = message.message.message;
+    room
+      .getAnnotationModifier()
+      .annotation(
+        message.message.id,
+        message.userId,
+        menu.annotationId,
+        menu.entityId,
+        message.message.id,
+        menu.annotationTitle,
+        menu.annotationText,
+        menu.owner,
+        menu.lastEditor,
+      );
+    const annotationForwardMessage: AnnotationForwardMessage = {
+      objectId: message.message.id,
+      userId: message.userId,
+      annotationId: menu.annotationId,
+      entityId: menu.entityId,
+      annotationTitle: menu.annotationTitle,
+      annotationText: menu.annotationText,
+      menuId: menu.menuId,
+      owner: menu.owner,
+      lastEditor: menu.lastEditor,
+    };
+    this.websocketGateway.sendBroadcastExceptOneMessage(
+      event,
+      message.roomId,
+      message.userId,
+      annotationForwardMessage,
     );
   }
 
@@ -711,6 +809,61 @@ export class SubscriberService {
       event,
       roomMessage.roomId,
       { userId: roomMessage.userId, originalMessage: message },
+    );
+  }
+
+  private handleAnnotationClosedEvent(
+    event: string,
+    roomMessage: RoomForwardMessage<AnnotationClosedMessage>,
+  ) {
+    const room = this.roomService.lookupRoom(roomMessage.roomId);
+    const message = roomMessage.message;
+    room.getAnnotationModifier().closeAnnotation(message.menuId);
+    this.websocketGateway.sendBroadcastForwardedMessage(
+      event,
+      roomMessage.roomId,
+      { userId: roomMessage.userId, originalMessage: message },
+    );
+  }
+
+  private handleAnnotationUpdatedEvent(
+    event: string,
+    roomMessage: RoomForwardMessage<PublishIdMessage<AnnotationUpdatedMessage>>,
+  ) {
+    const room = this.roomService.lookupRoom(roomMessage.roomId);
+    const message = roomMessage.message.message;
+    const annotations = room.getAnnotationModifier().getAnnotations();
+
+    let annotation: AnnotationModel;
+
+    for (const an of annotations) {
+      if (an.getMenuId() == message.objectId) {
+        annotation = an;
+        break;
+      }
+    }
+
+    if (!annotation) {
+      return;
+    }
+
+    annotation.setAnnotationTitle(message.annotationTitle);
+    annotation.setAnnotationText(message.annotationText);
+    annotation.setLastEditor(message.lastEditor);
+
+    const annotationUpdatedForwardMessage: AnnotationUpdatedForwardMessage = {
+      objectId: message.objectId,
+      annotationId: annotation.getAnnotationId(),
+      annotationTitle: annotation.getAnnotationTitle(),
+      annotationText: annotation.getAnnotationText(),
+      lastEditor: annotation.getLastEditor(),
+    };
+
+    this.websocketGateway.sendBroadcastExceptOneMessage(
+      event,
+      roomMessage.roomId,
+      roomMessage.userId,
+      annotationUpdatedForwardMessage,
     );
   }
 

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Socket } from 'socket.io';
 import {
   HighlightingObject,
+  InitialAnnotation,
   InitialApp,
   InitialDetachedMenu,
   InitialLandscapeMessage,
@@ -166,10 +167,25 @@ export class MessageFactoryService {
       detachedMenuArray.push(menuObj);
     }
 
+    const annotationArray: InitialAnnotation[] = [];
+    for (const an of room.getAnnotationModifier().getAnnotations()) {
+      const anObj: InitialAnnotation = {
+        objectId: an.getId(),
+        annotationId: an.getAnnotationId(),
+        entityId: an.getEntityId(),
+        menuId: an.getMenuId(),
+        annotationTitle: an.getAnnotationTitle(),
+        annotationText: an.getAnnotationText(),
+        userId: an.getUserId(),
+      };
+      annotationArray.push(anObj);
+    }
+
     return {
       openApps: appArray,
       landscape: landscapeObj,
       detachedMenus: detachedMenuArray,
+      annotations: annotationArray,
       highlightedExternCommunicationLinks: externCommunicationLinks,
     };
   }

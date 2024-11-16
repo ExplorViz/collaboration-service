@@ -34,11 +34,22 @@ import appClosedPayload = require('./../../test-payload/app-closed.json');
 import componentClosePayload = require('./../../test-payload/component-update-close.json');
 import timestamtPayload = require('./../../test-payload/timestamp-update.json');
 import menuDetachedPayload = require('./../../test-payload/menu-detached.json');
+import annotationPayload = require('./../../test-payload/annotation.json');
 import closeMenuDetachedPayload = require('./../../test-payload/detached-menu-closed.json');
+import closeAnnotationPayload = require('./../../test-payload/annotation-closed.json');
 import userPositionsPayload = require('./../../test-payload/user-positions.json');
 import grabObjectPayload = require('./../../test-payload/object-grabbed.json');
 import moveObjectPayload = require('./../../test-payload/object-moved.json');
 import releaseObjectPayload = require('./../../test-payload/object-released.json');
+import annotationEditPayload = require('./../../test-payload/annotation-edit.json');
+import annotationUpdatedPayload = require('./../../test-payload/annotation-updated.json');
+import { ANNOTATION_OPENED_EVENT } from 'src/message/client/receivable/annotation-opened-message';
+import { ANNOTATION_RESPONSE_EVENT } from 'src/message/client/sendable/annotation-response';
+import { ANNOTATION_CLOSED_EVENT } from 'src/message/client/receivable/annotation-closed-message';
+import { ANNOTATION_EDIT_EVENT } from 'src/message/client/receivable/annotation-edit-message';
+import { ANNOTATION_EDIT_RESPONSE_EVENT } from 'src/message/client/sendable/annotation-edit-response-message';
+import { ANNOTATION_UPDATED_EVENT } from 'src/message/client/receivable/annotation-updated-message';
+import { ANNOTATION_UPDATED_RESPONSE_EVENT } from 'src/message/client/sendable/annotation-updated-response';
 
 // Firstly, start the app via 'npm run start'. Then, execute the tests via 'npm run test:supertest'.
 
@@ -432,6 +443,148 @@ describe('collaboration', () => {
       await sleep(500);
       reject(new Error('No message received'));
     });
+  });
+
+  it('annotation opened', async () => {
+    let forwardedObjectId: string;
+    client2.socket.on(ANNOTATION_OPENED_EVENT, (msg) => {
+      // forwarded attributes are correct
+      expect(msg.userId).toStrictEqual(client1.id);
+      expect(msg.annotationId).toStrictEqual(annotationPayload.annotationId);
+      expect(msg.entityId).toStrictEqual(annotationPayload.entityId);
+      expect(msg.menuId).toStrictEqual(annotationPayload.menuId);
+      expect(msg.annotationTitle).toStrictEqual(
+        annotationPayload.annotationTitle,
+      );
+      expect(msg.annotationText).toStrictEqual(
+        annotationPayload.annotationText,
+      );
+      expect(msg.owner).toStrictEqual(annotationPayload.owner);
+      expect(msg.lastEditor).toStrictEqual(annotationPayload.lastEditor);
+      forwardedObjectId = msg.objectId;
+    });
+
+    let respondedObjectId: string;
+    client1.socket.on(ANNOTATION_RESPONSE_EVENT, (msg) => {
+      // nonce is correct
+      expect(msg.nonce).toStrictEqual(annotationPayload.nonce);
+      respondedObjectId = msg.response.objectId;
+    });
+
+    // open annotation
+    client1.socket.emit(ANNOTATION_OPENED_EVENT, annotationPayload);
+
+    await sleep(500);
+
+    // object id is equal for both clients
+    expect(forwardedObjectId).toBeDefined();
+    expect(respondedObjectId).toBeDefined();
+    expect(forwardedObjectId).toStrictEqual(respondedObjectId);
+  });
+
+  it('close annotation', async () => {
+    return new Promise<void>(async (resolve, reject) => {
+      let menuId: number;
+      client1.socket.on(ANNOTATION_RESPONSE_EVENT, (msg) => {
+        // nonce is correct
+        expect(msg.nonce).toStrictEqual(annotationPayload.nonce);
+        menuId = msg.response.objectId;
+      });
+      client1.socket.on(OBJECT_CLOSED_RESPONSE_EVENT, (msg) => {
+        // nonce is correct
+        expect(msg.nonce).toStrictEqual(closeAnnotationPayload.nonce);
+        // closing was successful
+        expect(msg.response.isSuccess).toStrictEqual(true);
+        resolve();
+      });
+
+      // open annotation
+      client1.socket.emit(ANNOTATION_OPENED_EVENT, annotationPayload);
+
+      await sleep(500);
+
+      // response including menu id were received
+      expect(menuId).toBeDefined;
+      closeAnnotationPayload.menuId = menuId;
+
+      // close annotation
+      client1.socket.emit(ANNOTATION_CLOSED_EVENT, closeAnnotationPayload);
+
+      // timeout
+      await sleep(500);
+      reject(new Error('No message received'));
+    });
+  });
+
+  it('annotation edit', async () => {
+    client2.socket.on(ANNOTATION_EDIT_EVENT, () => {
+      // there is no forwarding
+    });
+
+    let respondedIsEditable: boolean;
+    client1.socket.on(ANNOTATION_EDIT_RESPONSE_EVENT, (msg) => {
+      // nonce is correct
+      expect(msg.nonce).toStrictEqual(annotationEditPayload.nonce);
+      respondedIsEditable = msg.response.isEditable;
+    });
+
+    // edit annotation
+    client1.socket.emit(ANNOTATION_EDIT_EVENT, annotationEditPayload);
+
+    await sleep(500);
+
+    // object id is equal for both clients
+    expect(respondedIsEditable).toBeDefined();
+  });
+
+  it('annotation updated', async () => {
+    // prepare objectId for update
+    let objectId: string;
+    client2.socket.on(ANNOTATION_OPENED_EVENT, (msg) => {
+      objectId = msg.objectId;
+    });
+
+    // test update event
+    let forwardedObjectId: string;
+    client2.socket.on(ANNOTATION_UPDATED_EVENT, (msg) => {
+      // forwarded attributes are correct
+      expect(msg.annotationId).toStrictEqual(
+        annotationUpdatedPayload.annotationId,
+      );
+      expect(msg.annotationTitle).toStrictEqual(
+        annotationUpdatedPayload.annotationTitle,
+      );
+      expect(msg.annotationText).toStrictEqual(
+        annotationUpdatedPayload.annotationText,
+      );
+      expect(msg.lastEditor).toStrictEqual(annotationUpdatedPayload.lastEditor);
+      forwardedObjectId = msg.objectId;
+    });
+
+    let respondedUpdated: boolean;
+    client1.socket.on(ANNOTATION_UPDATED_RESPONSE_EVENT, (msg) => {
+      // nonce is correct
+      expect(msg.nonce).toStrictEqual(annotationUpdatedPayload.nonce);
+      respondedUpdated = msg.response.updated;
+    });
+
+    // add annotation
+    client1.socket.emit(ANNOTATION_OPENED_EVENT, annotationPayload);
+
+    await sleep(500);
+
+    // overwrite objectId of payload (not possible in other ways, because auto generation)
+    annotationUpdatedPayload.objectId = objectId;
+
+    // update annotation
+    client1.socket.emit(ANNOTATION_UPDATED_EVENT, annotationUpdatedPayload);
+
+    await sleep(500);
+
+    // object id is equal for both clients
+    expect(forwardedObjectId).toBeDefined();
+    expect(respondedUpdated).toBeDefined();
+    expect(forwardedObjectId).toStrictEqual(annotationUpdatedPayload.objectId);
   });
 
   it('update user position', async () => {

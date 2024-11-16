@@ -1,0 +1,12 @@
+{
+    "event": "annotation",
+    "annotationId": 149,
+    "entityId": "135a2307ed9028ece54746a808fb41f8f63fecba82ec561e0e24ad4fa9e425d1",
+    "menuId": null,
+    "annotationTitle": "testTitle",
+    "annotationText": "testText",
+    "owner": "John Doe",
+    "inEdit": false,
+    "lastEditor": "John Doe",
+    "nonce": 14
+}

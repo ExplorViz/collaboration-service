@@ -17,6 +17,22 @@ import {
   AllHighlightsResetMessage,
 } from 'src/message/client/receivable/all-highlights-reset-message';
 import {
+  ANNOTATION_CLOSED_EVENT,
+  AnnotationClosedMessage,
+} from 'src/message/client/receivable/annotation-closed-message';
+import {
+  ANNOTATION_EDIT_EVENT,
+  AnnotationEditMessage,
+} from 'src/message/client/receivable/annotation-edit-message';
+import {
+  ANNOTATION_OPENED_EVENT,
+  AnnotationOpenedMessage,
+} from 'src/message/client/receivable/annotation-opened-message';
+import {
+  ANNOTATION_UPDATED_EVENT,
+  AnnotationUpdatedMessage,
+} from 'src/message/client/receivable/annotation-updated-message';
+import {
   APP_CLOSED_EVENT,
   AppClosedMessage,
 } from 'src/message/client/receivable/app-closed-message';
@@ -104,6 +120,15 @@ import {
   VISUALIZATION_MODE_UPDATE_EVENT,
   VisualizationModeUpdateMessage,
 } from 'src/message/client/receivable/visualization-mode-update';
+import { ANNOTATION_EDIT_RESPONSE_EVENT } from 'src/message/client/sendable/annotation-edit-response-message';
+import {
+  ANNOTATION_RESPONSE_EVENT,
+  AnnotationResponse,
+} from 'src/message/client/sendable/annotation-response';
+import {
+  ANNOTATION_UPDATED_RESPONSE_EVENT,
+  AnnotationUpdatedResponse,
+} from 'src/message/client/sendable/annotation-updated-response';
 import { ForwardedMessage } from 'src/message/client/sendable/forwarded-message';
 import { INITIAL_LANDSCAPE_EVENT } from 'src/message/client/sendable/initial-landscape-message';
 import {
@@ -480,6 +505,28 @@ export class WebsocketGateway
     const response: MenuDetachedResponse = { objectId: id };
     this.sendResponse(
       MENU_DETACHED_RESPONSE_EVENT,
+      client,
+      message.nonce,
+      response,
+    );
+  }
+
+  @SubscribeMessage(ANNOTATION_OPENED_EVENT)
+  async handleAnnotationOpenedMessage(
+    @MessageBody() message: AnnotationOpenedMessage,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const id = await this.idGenerationService.nextId();
+    const roomMessage = this.messageFactoryService.makeRoomForwardMessage<
+      PublishIdMessage<AnnotationOpenedMessage>
+    >(client, { id: id, message: message });
+    this.publisherService.publishRoomForwardMessage(
+      ANNOTATION_OPENED_EVENT,
+      roomMessage,
+    );
+    const response: AnnotationResponse = { objectId: id };
+    this.sendResponse(
+      ANNOTATION_RESPONSE_EVENT,
       client,
       message.nonce,
       response,
@@ -1002,5 +1049,113 @@ export class WebsocketGateway
       message.nonce,
       response,
     );
+  }
+
+  @SubscribeMessage(ANNOTATION_CLOSED_EVENT)
+  async handleAnnotationClosedMessage(
+    @MessageBody() message: AnnotationClosedMessage,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const session = this.sessionService.lookupSession(client);
+    const object = session
+      .getRoom()
+      .getGrabModifier()
+      .getGrabbableObject(message.menuId);
+    let success = true;
+    if (object) {
+      success = await this.lockService.closeGrabbableObject(
+        session.getRoom(),
+        object,
+      );
+    }
+
+    if (success) {
+      const roomMessage =
+        this.messageFactoryService.makeRoomForwardMessage<AnnotationClosedMessage>(
+          client,
+          message,
+        );
+      this.publisherService.publishRoomForwardMessage(
+        ANNOTATION_CLOSED_EVENT,
+        roomMessage,
+      );
+    }
+
+    const response: ObjectClosedResponse = { isSuccess: success };
+    this.sendResponse(
+      OBJECT_CLOSED_RESPONSE_EVENT,
+      client,
+      message.nonce,
+      response,
+    );
+  }
+
+  @SubscribeMessage(ANNOTATION_UPDATED_EVENT)
+  async handleAnnotationUpdatedMessage(
+    @MessageBody() message: AnnotationUpdatedMessage,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const id = message.objectId;
+    const roomMessage = this.messageFactoryService.makeRoomForwardMessage<
+      PublishIdMessage<AnnotationUpdatedMessage>
+    >(client, { id: id, message: message });
+    this.publisherService.publishRoomForwardMessage(
+      ANNOTATION_UPDATED_EVENT,
+      roomMessage,
+    );
+
+    const session = this.sessionService.lookupSession(client);
+    this.lockService.releaseGrabbableObjectLock(
+      session.getUser(),
+      message.objectId,
+    );
+
+    const response: AnnotationUpdatedResponse = { updated: true };
+    this.sendResponse(
+      ANNOTATION_UPDATED_RESPONSE_EVENT,
+      client,
+      message.nonce,
+      response,
+    );
+  }
+
+  @SubscribeMessage(ANNOTATION_EDIT_EVENT)
+  async handleAnnotationEditMessage(
+    @MessageBody() message: AnnotationEditMessage,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const session = this.sessionService.lookupSession(client);
+    const object = session
+      .getRoom()
+      .getGrabModifier()
+      .getGrabbableObject(message.objectId);
+    let success = true;
+    if (object) {
+      success = await this.lockService.lockGrabbableObject(
+        session.getRoom(),
+        session.getUser(),
+        object,
+      );
+    }
+
+    if (success) {
+      const response = { isEditable: true };
+
+      this.sendResponse(
+        ANNOTATION_EDIT_RESPONSE_EVENT,
+        client,
+        message.nonce,
+        response,
+      );
+    } else {
+      const response = { isEditable: false };
+
+      this.sendResponse(
+        ANNOTATION_EDIT_RESPONSE_EVENT,
+        client,
+        message.nonce,
+        response,
+      );
+    }
   }
 }

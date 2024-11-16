@@ -6,6 +6,7 @@ export type InitialLandscapeMessage = {
   openApps: InitialApp[];
   landscape: Landscape;
   detachedMenus: InitialDetachedMenu[];
+  annotations: InitialAnnotation[];
   highlightedExternCommunicationLinks: HighlightingObject[];
 };
 
@@ -25,6 +26,16 @@ export type InitialDetachedMenu = {
   position: number[];
   quaternion: number[];
   scale: number[];
+  userId: string;
+};
+
+export type InitialAnnotation = {
+  objectId: string | null;
+  annotationId: number;
+  entityId: string | undefined;
+  menuId: string | undefined;
+  annotationTitle: string;
+  annotationText: string;
   userId: string;
 };
 
