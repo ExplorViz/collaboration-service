@@ -83,12 +83,14 @@ export class AppController {
     }
 
     const annotations: PublishedAnnotation[] = [];
-    for (const annotation of body.annotations) {
-      const id = await this.idGenerationService.nextId();
-      annotations.push({
-        id: id,
-        menu: annotation,
-      });
+    if (body.annotations) {
+      for (const annotation of body.annotations) {
+        const id = await this.idGenerationService.nextId();
+        annotations.push({
+          id: id,
+          menu: annotation,
+        });
+      }
     }
 
     const landscape: PublishedLandscape = {
