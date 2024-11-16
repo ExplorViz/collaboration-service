@@ -24,7 +24,6 @@ stages:
   - build
   - test
   - deploy:images
-  - deploy:retagging
 
 build:
   stage: build
@@ -36,6 +35,11 @@ build:
       - node_modules
       - dist
 
+lint:
+  stage: test
+  script:
+    - npm run lint
+
 test:
   stage: test
   variables:
@@ -46,37 +50,7 @@ test:
   script:
     - npm run start &
     - sleep 10
-    - npm run test:supertest
-
-deploy-main-amd64:
-  extends:
-    - .build-and-deploy
-  variables:
-    DOCKERHUB_TAG: 'amd64'
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_PIPELINE_SOURCE == "pipeline"'
-
-deploy-main-arm64:
-  extends:
-    - .build-and-deploy
-  tags:
-    - 'arm64'
-  variables:
-    DOCKERHUB_TAG: 'arm64'
-  rules:
-    - if: $MULTI_ARCH_BUILD || $ARM64_BUILD
-
-retag-amd64-as-latest::
-  extends: .retag-dockerhub-image
-  rules:
-    - if: $MULTI_ARCH_BUILD || $ARM64_BUILD
-      when: never
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_PIPELINE_SOURCE == "pipeline"'
-  variables:
-    SOURCE_TAG: 'amd64'
-    TARGET_TAG: 'latest'
+    - npm run test
 
 deploy-mr:
   variables:
@@ -85,6 +59,3 @@ deploy-mr:
     - .build-and-deploy
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
-
-publish-multi-arch-manifest:
-  extends: .retag-as-multi-arch-dockerhub-image

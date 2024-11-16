@@ -1,11 +1,11 @@
 ## Description
 
-Re-engineered Collaboration Service. The corresponding frontend branch is availabe [here](https://git.se.informatik.uni-kiel.de/ExplorViz/code/frontend/-/tree/socketio?ref_type=heads).
+Service that enables collaborative features for ExplorViz.
 
 ## Installation
 
 - `git clone <repository-url>` this repository
-- `cd collaboration-service-js`
+- `cd collaboration-service`
 - `npm install`
 
 ## Running / Development
@@ -16,8 +16,8 @@ Re-engineered Collaboration Service. The corresponding frontend branch is availa
 ## Testing
 
 - Start local Redis instance: `docker compose -f .dev/compose.yaml up -d`
-- Start application: `npm run start`
-- Start tests: `npm run test:supertest`
+- Start application: `npm start`
+- Start tests: `npm test`
 
 ## Building
 

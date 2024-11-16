@@ -153,6 +153,14 @@ import {
   USER_DISCONNECTED_EVENT,
   UserDisconnectedMessage,
 } from 'src/message/client/sendable/user-disconnected-message';
+import {
+  ChatMessage,
+  CHAT_MESSAGE_EVENT,
+} from 'src/message/client/receivable/chat-message';
+import {
+  CHAT_SYNC_EVENT,
+  ChatSynchronizeMessage,
+} from 'src/message/client/receivable/chat-sync-message';
 import { PublishIdMessage } from 'src/message/pubsub/publish-id-message';
 import { Room } from 'src/model/room-model';
 import { PublisherService } from 'src/publisher/publisher.service';
@@ -162,6 +170,20 @@ import { TicketService } from 'src/ticket/ticket.service';
 import { Session } from 'src/util/session';
 import { Ticket } from 'src/util/ticket';
 import { VisualizationMode } from 'src/util/visualization-mode';
+import { ChatService } from 'src/chat/chat.service';
+import { ChatSynchronizeResponse } from 'src/message/client/sendable/chat-sync-response';
+import {
+  USER_MUTE_EVENT,
+  UserMuteUpdate,
+} from 'src/message/client/receivable/mute-update-message';
+import {
+  USER_KICK_EVENT,
+  UserKickEvent,
+} from 'src/message/client/receivable/user-kick-event';
+import {
+  MESSAGE_DELETE_EVENT,
+  MessageDeleteEvent,
+} from 'src/message/client/receivable/delete-message';
 
 @WebSocketGateway({ cors: true })
 export class WebsocketGateway
@@ -175,6 +197,7 @@ export class WebsocketGateway
     private readonly idGenerationService: IdGenerationService,
     private readonly lockService: LockService,
     private readonly publisherService: PublisherService,
+    private readonly chatService: ChatService,
   ) {}
 
   @WebSocketServer()
@@ -255,6 +278,20 @@ export class WebsocketGateway
     if (!session) {
       return;
     }
+    const chatMessage: ChatMessage = {
+      msgId: 0,
+      userId: session.getUser().getId(),
+      msg: `${session.getUser().getUserName()}(${session
+        .getUser()
+        .getId()}) disconnected from room ${session.getRoom().getRoomId()}`,
+      userName: session.getUser().getUserName(),
+      timestamp: '',
+      isEvent: true,
+      eventType: 'disconnection_event',
+      eventData: [],
+    };
+
+    this.handleChatMessage(chatMessage, client);
 
     this.sessionService.unregister(session);
 
@@ -272,6 +309,16 @@ export class WebsocketGateway
         message,
       ),
     );
+  }
+
+  deleteEmptyChatRoom(roomId: string) {
+    this.chatService.removeChatRoom(roomId);
+  }
+
+  private getTime() {
+    const h = new Date().getHours();
+    const m = new Date().getMinutes();
+    return `${h}:${m < 10 ? '0' + m : m}`;
   }
 
   // UTIL
@@ -304,33 +351,6 @@ export class WebsocketGateway
     message: any,
   ): void {
     this.server.to(client.id).emit(event, message);
-  }
-
-  /**
-   * Broadcasts a user's position to all AR/VR and spectating clients within a room. Excludes the intial sender of the message.
-   *
-   * @param roomId The ID of the room
-   * @param message The message which encapsulated the user's position
-   */
-  sendUserPositionsMessage(
-    roomId: string,
-    message: ForwardedMessage<UserPositionsMessage>,
-  ): void {
-    const userId = message.userId;
-    const client = this.sessionService.lookupSocket(userId);
-    if (client) {
-      // Exclude sender of the message if it is connected to the server
-      client
-        .to(this.getVrRoom(roomId))
-        .to(this.getSpectatingRoom(roomId))
-        .emit(USER_POSITIONS_EVENT, message);
-    } else {
-      // Otherwise send to all clients
-      this.server
-        .to(this.getVrRoom(roomId))
-        .to(this.getSpectatingRoom(roomId))
-        .emit(USER_POSITIONS_EVENT, message);
-    }
   }
 
   /**
@@ -853,6 +873,105 @@ export class WebsocketGateway
     this.lockService.releaseGrabbableObjectLock(
       session.getUser(),
       message.objectId,
+    );
+  }
+
+  @SubscribeMessage(CHAT_MESSAGE_EVENT)
+  async handleChatMessage(
+    @MessageBody() message: ChatMessage,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const session = this.sessionService.lookupSession(client);
+    const roomId = session.getRoom().getRoomId();
+
+    if (this.chatService.isUserMuted(roomId, message.userId)) {
+      return;
+    }
+    message.msgId = this.chatService.getNewMessageId();
+    message.timestamp = this.getTime();
+
+    const roomMessage =
+      this.messageFactoryService.makeRoomForwardMessage<ChatMessage>(
+        client,
+        message,
+      );
+
+    this.chatService.addMessage(roomId, message);
+    this.publisherService.publishRoomForwardMessage(
+      CHAT_MESSAGE_EVENT,
+      roomMessage,
+    );
+  }
+
+  @SubscribeMessage(USER_MUTE_EVENT)
+  async handleMuteEvent(
+    @MessageBody() message: UserMuteUpdate,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const session = this.sessionService.lookupSession(client);
+    const roomId = session.getRoom().getRoomId();
+    const userId = message.userId;
+
+    if (this.chatService.isUserMuted(roomId, userId)) {
+      this.chatService.unmuteUser(roomId, userId);
+    } else {
+      this.chatService.muteUser(roomId, userId);
+    }
+  }
+
+  @SubscribeMessage(CHAT_SYNC_EVENT)
+  async handleChatSyncEvent(
+    @MessageBody() message: ChatSynchronizeMessage,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const session = this.sessionService.lookupSession(client);
+    const roomId = session.getRoom().getRoomId();
+    const chatmsgs = this.chatService.getChatMessages(roomId);
+    const roomMessage = this.messageFactoryService.makeRoomForwardMessage<
+      ChatSynchronizeResponse[]
+    >(client, chatmsgs);
+    this.publisherService.publishRoomForwardMessage(
+      CHAT_SYNC_EVENT,
+      roomMessage,
+    );
+  }
+
+  @SubscribeMessage(USER_KICK_EVENT)
+  async handleKickEvent(
+    @MessageBody() message: UserKickEvent,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const roomMessage =
+      this.messageFactoryService.makeRoomForwardMessage<UserKickEvent>(
+        client,
+        message,
+      );
+
+    this.publisherService.publishRoomForwardMessage(
+      USER_KICK_EVENT,
+      roomMessage,
+    );
+  }
+
+  @SubscribeMessage(MESSAGE_DELETE_EVENT)
+  async handleMessageDeleteEvent(
+    @MessageBody() message: MessageDeleteEvent,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const roomMessage =
+      this.messageFactoryService.makeRoomForwardMessage<MessageDeleteEvent>(
+        client,
+        message,
+      );
+    const session = this.sessionService.lookupSession(client);
+    const roomId = session.getRoom().getRoomId();
+    message.msgIds.forEach((msgId) =>
+      this.chatService.removeMessage(roomId, msgId),
+    );
+
+    this.publisherService.publishRoomForwardMessage(
+      MESSAGE_DELETE_EVENT,
+      roomMessage,
     );
   }
 
