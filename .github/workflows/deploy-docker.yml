@@ -58,8 +58,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     env:
-      REDIS_HOST: redis
-      REDIS_PORT: '6379'
       MONGO_URI: 'mongodb://mongo/collab_db'
     steps:
       - name: Checkout repository
