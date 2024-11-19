@@ -726,10 +726,14 @@ export class WebsocketGateway
         message.configurationId,
       );
 
-      const spectateConfig = {
-        id: config[0].id,
-        devices: config[0].devices,
-      };
+      let spectateConfig = null;
+
+      if (config.length > 0) {
+        spectateConfig = {
+          id: config[0].id,
+          devices: config[0].devices,
+        };
+      }
 
       message.configuration = spectateConfig;
     }

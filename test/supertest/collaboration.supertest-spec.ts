@@ -263,11 +263,6 @@ describe('collaboration', () => {
       spectatePayload.spectatingUserIds = [client1.id];
       spectatePayload.spectatedUserId = client2.id;
 
-      console.log(spectatePayload);
-
-      console.log(client1.id);
-      console.log(client2.id);
-
       client2.socket.on(SPECTATING_UPDATE_EVENT, (msg) => {
         // forwarded message is correct
         expect(msg).toStrictEqual({
