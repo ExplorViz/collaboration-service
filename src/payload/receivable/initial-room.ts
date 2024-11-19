@@ -3,6 +3,7 @@ export type InitialRoomPayload = {
   landscape: Landscape;
   openApps: App[];
   detachedMenus: DetachedMenu[];
+  annotations: Annotation[];
 };
 
 // TODO missing properties
@@ -27,4 +28,16 @@ export type DetachedMenu = {
   position: number[];
   quaternion: number[];
   scale: number[];
+};
+
+export type Annotation = {
+  annotationId: number;
+  entityId: string | undefined;
+  menuId: string | undefined;
+  annotationTitle: string;
+  annotationText: string;
+  userId: string;
+  owner: string;
+  isEditable: boolean;
+  lastEditor: string;
 };

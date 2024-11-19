@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { Socket } from 'socket.io';
 import {
   HighlightingObject,
+  InitialAnnotation,
   InitialApp,
   InitialDetachedMenu,
   InitialLandscapeMessage,
 } from 'src/message/client/sendable/initial-landscape-message';
 import { SelfConnectedMessage } from 'src/message/client/sendable/self-connected-message';
-import { TimestampUpdateTimerMessage } from 'src/message/client/sendable/timestamp-update-timer-message';
 import { RoomForwardMessage } from 'src/message/pubsub/room-forward-message';
 import { RoomStatusMessage } from 'src/message/pubsub/room-status-message';
 import { HighlightingModel } from 'src/model/highlighting-model';
@@ -167,17 +167,26 @@ export class MessageFactoryService {
       detachedMenuArray.push(menuObj);
     }
 
+    const annotationArray: InitialAnnotation[] = [];
+    for (const an of room.getAnnotationModifier().getAnnotations()) {
+      const anObj: InitialAnnotation = {
+        objectId: an.getId(),
+        annotationId: an.getAnnotationId(),
+        entityId: an.getEntityId(),
+        menuId: an.getMenuId(),
+        annotationTitle: an.getAnnotationTitle(),
+        annotationText: an.getAnnotationText(),
+        userId: an.getUserId(),
+      };
+      annotationArray.push(anObj);
+    }
+
     return {
       openApps: appArray,
       landscape: landscapeObj,
       detachedMenus: detachedMenuArray,
+      annotations: annotationArray,
       highlightedExternCommunicationLinks: externCommunicationLinks,
     };
-  }
-
-  makeTimestampUpdateTimerMessage(room: Room): TimestampUpdateTimerMessage {
-    const timestamp = new Date().getTime() - 60000;
-    room.getLandscapeModifier().updateTimestamp(timestamp);
-    return { timestamp };
   }
 }

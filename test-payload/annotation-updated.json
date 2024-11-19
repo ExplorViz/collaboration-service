@@ -1,0 +1,9 @@
+{
+    "event": "annotation_updated",
+    "annotationId": 149,
+    "objectId": "sdf8s7df8sdf8s7dfugsfdusfd78687sdfshdfsdf67",
+    "annotationTitle": "testTitle",
+    "annotationText": "testText",
+    "lastEditor": "John Doe",
+    "nonce": 17
+}

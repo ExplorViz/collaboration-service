@@ -1,4 +1,4 @@
-import { Logger, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { RoomService } from './room/room.service';
@@ -14,11 +14,15 @@ import { PublisherService } from './publisher/publisher.service';
 import { SubscriberService } from './subscriber/subscriber.service';
 import { MongoInitService } from './persistence/mongo-init.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { SpectateConfig, SpectateConfigSchema } from './persistence/spectateConfiguration/spectateConfig.schema';
+import {
+  SpectateConfig,
+  SpectateConfigSchema,
+} from './persistence/spectateConfiguration/spectateConfig.schema';
 import { SpectateConfigController } from './persistence/spectateConfiguration/spectateConfig.controller';
 import { SpectateConfigsService } from './persistence/spectateConfiguration/spectateConfig.service';
 import { SpectateConfigFallback } from './persistence/spectateConfiguration/spectateConfigFallback.service';
 
+import { ChatService } from './chat/chat.service';
 
 @Module({
   imports: [
@@ -43,6 +47,7 @@ import { SpectateConfigFallback } from './persistence/spectateConfiguration/spec
     LockService,
     PublisherService,
     SubscriberService,
+    ChatService,
   ],
   exports: [],
 })
@@ -52,31 +57,32 @@ export class AppModule {
 
     const mongoImports = mongoAvailable
       ? [
-          MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://127.0.0.1:27018/collab_db'),
+          MongooseModule.forRoot(
+            process.env.MONGO_URI || 'mongodb://127.0.0.1:27018/collab_db',
+          ),
           MongooseModule.forFeature([
-              { name: SpectateConfig.name, schema: SpectateConfigSchema },
+            { name: SpectateConfig.name, schema: SpectateConfigSchema },
           ]),
         ]
       : [];
 
-    const mongoControllers = mongoAvailable
-      ? [SpectateConfigController] : [];
+    const mongoControllers = mongoAvailable ? [SpectateConfigController] : [];
 
     const mongoProviders = mongoAvailable
       ? [
-        {
-          provide: 'SpectateConfigInterface',
-          useClass: SpectateConfigsService,
-        },
-      ] : [
-        {
-          provide: 'SpectateConfigInterface',
-          useClass: SpectateConfigFallback,
-        },
-      ];
+          {
+            provide: 'SpectateConfigInterface',
+            useClass: SpectateConfigsService,
+          },
+        ]
+      : [
+          {
+            provide: 'SpectateConfigInterface',
+            useClass: SpectateConfigFallback,
+          },
+        ];
 
-    const mongoExports = mongoAvailable
-      ? ['SpectateConfigInterface'] : [];
+    const mongoExports = mongoAvailable ? ['SpectateConfigInterface'] : [];
 
     return {
       module: AppModule,

@@ -17,6 +17,22 @@ import {
   AllHighlightsResetMessage,
 } from 'src/message/client/receivable/all-highlights-reset-message';
 import {
+  ANNOTATION_CLOSED_EVENT,
+  AnnotationClosedMessage,
+} from 'src/message/client/receivable/annotation-closed-message';
+import {
+  ANNOTATION_EDIT_EVENT,
+  AnnotationEditMessage,
+} from 'src/message/client/receivable/annotation-edit-message';
+import {
+  ANNOTATION_OPENED_EVENT,
+  AnnotationOpenedMessage,
+} from 'src/message/client/receivable/annotation-opened-message';
+import {
+  ANNOTATION_UPDATED_EVENT,
+  AnnotationUpdatedMessage,
+} from 'src/message/client/receivable/annotation-updated-message';
+import {
   APP_CLOSED_EVENT,
   AppClosedMessage,
 } from 'src/message/client/receivable/app-closed-message';
@@ -104,6 +120,15 @@ import {
   VISUALIZATION_MODE_UPDATE_EVENT,
   VisualizationModeUpdateMessage,
 } from 'src/message/client/receivable/visualization-mode-update';
+import { ANNOTATION_EDIT_RESPONSE_EVENT } from 'src/message/client/sendable/annotation-edit-response-message';
+import {
+  ANNOTATION_RESPONSE_EVENT,
+  AnnotationResponse,
+} from 'src/message/client/sendable/annotation-response';
+import {
+  ANNOTATION_UPDATED_RESPONSE_EVENT,
+  AnnotationUpdatedResponse,
+} from 'src/message/client/sendable/annotation-updated-response';
 import { ForwardedMessage } from 'src/message/client/sendable/forwarded-message';
 import { INITIAL_LANDSCAPE_EVENT } from 'src/message/client/sendable/initial-landscape-message';
 import {
@@ -128,6 +153,14 @@ import {
   USER_DISCONNECTED_EVENT,
   UserDisconnectedMessage,
 } from 'src/message/client/sendable/user-disconnected-message';
+import {
+  ChatMessage,
+  CHAT_MESSAGE_EVENT,
+} from 'src/message/client/receivable/chat-message';
+import {
+  CHAT_SYNC_EVENT,
+  ChatSynchronizeMessage,
+} from 'src/message/client/receivable/chat-sync-message';
 import { PublishIdMessage } from 'src/message/pubsub/publish-id-message';
 import { Room } from 'src/model/room-model';
 import { SpectateConfigInterface } from 'src/persistence/spectateConfiguration/spectateConfig.interface';
@@ -139,6 +172,20 @@ import { TicketService } from 'src/ticket/ticket.service';
 import { Session } from 'src/util/session';
 import { Ticket } from 'src/util/ticket';
 import { VisualizationMode } from 'src/util/visualization-mode';
+import { ChatService } from 'src/chat/chat.service';
+import { ChatSynchronizeResponse } from 'src/message/client/sendable/chat-sync-response';
+import {
+  USER_MUTE_EVENT,
+  UserMuteUpdate,
+} from 'src/message/client/receivable/mute-update-message';
+import {
+  USER_KICK_EVENT,
+  UserKickEvent,
+} from 'src/message/client/receivable/user-kick-event';
+import {
+  MESSAGE_DELETE_EVENT,
+  MessageDeleteEvent,
+} from 'src/message/client/receivable/delete-message';
 
 @WebSocketGateway({ cors: true })
 export class WebsocketGateway
@@ -152,7 +199,9 @@ export class WebsocketGateway
     private readonly idGenerationService: IdGenerationService,
     private readonly lockService: LockService,
     private readonly publisherService: PublisherService,
-    @Inject('SpectateConfigInterface') private readonly spectateConfigService: SpectateConfigInterface,
+    @Inject('SpectateConfigInterface')
+    private readonly spectateConfigService: SpectateConfigInterface,
+    private readonly chatService: ChatService,
   ) {}
 
   @WebSocketServer()
@@ -233,6 +282,20 @@ export class WebsocketGateway
     if (!session) {
       return;
     }
+    const chatMessage: ChatMessage = {
+      msgId: 0,
+      userId: session.getUser().getId(),
+      msg: `${session.getUser().getUserName()}(${session
+        .getUser()
+        .getId()}) disconnected from room ${session.getRoom().getRoomId()}`,
+      userName: session.getUser().getUserName(),
+      timestamp: '',
+      isEvent: true,
+      eventType: 'disconnection_event',
+      eventData: [],
+    };
+
+    this.handleChatMessage(chatMessage, client);
 
     this.sessionService.unregister(session);
 
@@ -250,6 +313,16 @@ export class WebsocketGateway
         message,
       ),
     );
+  }
+
+  deleteEmptyChatRoom(roomId: string) {
+    this.chatService.removeChatRoom(roomId);
+  }
+
+  private getTime() {
+    const h = new Date().getHours();
+    const m = new Date().getMinutes();
+    return `${h}:${m < 10 ? '0' + m : m}`;
   }
 
   // UTIL
@@ -436,6 +509,28 @@ export class WebsocketGateway
     const response: MenuDetachedResponse = { objectId: id };
     this.sendResponse(
       MENU_DETACHED_RESPONSE_EVENT,
+      client,
+      message.nonce,
+      response,
+    );
+  }
+
+  @SubscribeMessage(ANNOTATION_OPENED_EVENT)
+  async handleAnnotationOpenedMessage(
+    @MessageBody() message: AnnotationOpenedMessage,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const id = await this.idGenerationService.nextId();
+    const roomMessage = this.messageFactoryService.makeRoomForwardMessage<
+      PublishIdMessage<AnnotationOpenedMessage>
+    >(client, { id: id, message: message });
+    this.publisherService.publishRoomForwardMessage(
+      ANNOTATION_OPENED_EVENT,
+      roomMessage,
+    );
+    const response: AnnotationResponse = { objectId: id };
+    this.sendResponse(
+      ANNOTATION_RESPONSE_EVENT,
       client,
       message.nonce,
       response,
@@ -789,6 +884,105 @@ export class WebsocketGateway
     );
   }
 
+  @SubscribeMessage(CHAT_MESSAGE_EVENT)
+  async handleChatMessage(
+    @MessageBody() message: ChatMessage,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const session = this.sessionService.lookupSession(client);
+    const roomId = session.getRoom().getRoomId();
+
+    if (this.chatService.isUserMuted(roomId, message.userId)) {
+      return;
+    }
+    message.msgId = this.chatService.getNewMessageId();
+    message.timestamp = this.getTime();
+
+    const roomMessage =
+      this.messageFactoryService.makeRoomForwardMessage<ChatMessage>(
+        client,
+        message,
+      );
+
+    this.chatService.addMessage(roomId, message);
+    this.publisherService.publishRoomForwardMessage(
+      CHAT_MESSAGE_EVENT,
+      roomMessage,
+    );
+  }
+
+  @SubscribeMessage(USER_MUTE_EVENT)
+  async handleMuteEvent(
+    @MessageBody() message: UserMuteUpdate,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const session = this.sessionService.lookupSession(client);
+    const roomId = session.getRoom().getRoomId();
+    const userId = message.userId;
+
+    if (this.chatService.isUserMuted(roomId, userId)) {
+      this.chatService.unmuteUser(roomId, userId);
+    } else {
+      this.chatService.muteUser(roomId, userId);
+    }
+  }
+
+  @SubscribeMessage(CHAT_SYNC_EVENT)
+  async handleChatSyncEvent(
+    @MessageBody() message: ChatSynchronizeMessage,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const session = this.sessionService.lookupSession(client);
+    const roomId = session.getRoom().getRoomId();
+    const chatmsgs = this.chatService.getChatMessages(roomId);
+    const roomMessage = this.messageFactoryService.makeRoomForwardMessage<
+      ChatSynchronizeResponse[]
+    >(client, chatmsgs);
+    this.publisherService.publishRoomForwardMessage(
+      CHAT_SYNC_EVENT,
+      roomMessage,
+    );
+  }
+
+  @SubscribeMessage(USER_KICK_EVENT)
+  async handleKickEvent(
+    @MessageBody() message: UserKickEvent,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const roomMessage =
+      this.messageFactoryService.makeRoomForwardMessage<UserKickEvent>(
+        client,
+        message,
+      );
+
+    this.publisherService.publishRoomForwardMessage(
+      USER_KICK_EVENT,
+      roomMessage,
+    );
+  }
+
+  @SubscribeMessage(MESSAGE_DELETE_EVENT)
+  async handleMessageDeleteEvent(
+    @MessageBody() message: MessageDeleteEvent,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const roomMessage =
+      this.messageFactoryService.makeRoomForwardMessage<MessageDeleteEvent>(
+        client,
+        message,
+      );
+    const session = this.sessionService.lookupSession(client);
+    const roomId = session.getRoom().getRoomId();
+    message.msgIds.forEach((msgId) =>
+      this.chatService.removeMessage(roomId, msgId),
+    );
+
+    this.publisherService.publishRoomForwardMessage(
+      MESSAGE_DELETE_EVENT,
+      roomMessage,
+    );
+  }
+
   @SubscribeMessage(APP_CLOSED_EVENT)
   async handleAppClosedMessage(
     @MessageBody() message: AppClosedMessage,
@@ -863,5 +1057,113 @@ export class WebsocketGateway
       message.nonce,
       response,
     );
+  }
+
+  @SubscribeMessage(ANNOTATION_CLOSED_EVENT)
+  async handleAnnotationClosedMessage(
+    @MessageBody() message: AnnotationClosedMessage,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const session = this.sessionService.lookupSession(client);
+    const object = session
+      .getRoom()
+      .getGrabModifier()
+      .getGrabbableObject(message.menuId);
+    let success = true;
+    if (object) {
+      success = await this.lockService.closeGrabbableObject(
+        session.getRoom(),
+        object,
+      );
+    }
+
+    if (success) {
+      const roomMessage =
+        this.messageFactoryService.makeRoomForwardMessage<AnnotationClosedMessage>(
+          client,
+          message,
+        );
+      this.publisherService.publishRoomForwardMessage(
+        ANNOTATION_CLOSED_EVENT,
+        roomMessage,
+      );
+    }
+
+    const response: ObjectClosedResponse = { isSuccess: success };
+    this.sendResponse(
+      OBJECT_CLOSED_RESPONSE_EVENT,
+      client,
+      message.nonce,
+      response,
+    );
+  }
+
+  @SubscribeMessage(ANNOTATION_UPDATED_EVENT)
+  async handleAnnotationUpdatedMessage(
+    @MessageBody() message: AnnotationUpdatedMessage,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const id = message.objectId;
+    const roomMessage = this.messageFactoryService.makeRoomForwardMessage<
+      PublishIdMessage<AnnotationUpdatedMessage>
+    >(client, { id: id, message: message });
+    this.publisherService.publishRoomForwardMessage(
+      ANNOTATION_UPDATED_EVENT,
+      roomMessage,
+    );
+
+    const session = this.sessionService.lookupSession(client);
+    this.lockService.releaseGrabbableObjectLock(
+      session.getUser(),
+      message.objectId,
+    );
+
+    const response: AnnotationUpdatedResponse = { updated: true };
+    this.sendResponse(
+      ANNOTATION_UPDATED_RESPONSE_EVENT,
+      client,
+      message.nonce,
+      response,
+    );
+  }
+
+  @SubscribeMessage(ANNOTATION_EDIT_EVENT)
+  async handleAnnotationEditMessage(
+    @MessageBody() message: AnnotationEditMessage,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const session = this.sessionService.lookupSession(client);
+    const object = session
+      .getRoom()
+      .getGrabModifier()
+      .getGrabbableObject(message.objectId);
+    let success = true;
+    if (object) {
+      success = await this.lockService.lockGrabbableObject(
+        session.getRoom(),
+        session.getUser(),
+        object,
+      );
+    }
+
+    if (success) {
+      const response = { isEditable: true };
+
+      this.sendResponse(
+        ANNOTATION_EDIT_RESPONSE_EVENT,
+        client,
+        message.nonce,
+        response,
+      );
+    } else {
+      const response = { isEditable: false };
+
+      this.sendResponse(
+        ANNOTATION_EDIT_RESPONSE_EVENT,
+        client,
+        message.nonce,
+        response,
+      );
+    }
   }
 }

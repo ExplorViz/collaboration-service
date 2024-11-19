@@ -1,4 +1,5 @@
 import {
+  Annotation,
   App,
   DetachedMenu,
   Landscape,
@@ -15,6 +16,7 @@ export type PublishedInitialRoom = {
   landscape: PublishedLandscape;
   openApps: App[];
   detachedMenus: PublishedDetachedMenu[];
+  annotations: PublishedAnnotation[];
 };
 
 export type PublishedLandscape = {
@@ -25,4 +27,9 @@ export type PublishedLandscape = {
 export type PublishedDetachedMenu = {
   id: string;
   menu: DetachedMenu;
+};
+
+export type PublishedAnnotation = {
+  id: string;
+  menu: Annotation;
 };
