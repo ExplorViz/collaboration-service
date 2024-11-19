@@ -263,9 +263,14 @@ describe('collaboration', () => {
       spectatePayload.spectatingUserIds = [client1.id];
       spectatePayload.spectatedUserId = client2.id;
 
+      console.log(spectatePayload);
+
+      console.log(client1.id);
+      console.log(client2.id);
+
       client2.socket.on(SPECTATING_UPDATE_EVENT, (msg) => {
         // forwarded message is correct
-        expect(msg).toMatchObject({
+        expect(msg).toStrictEqual({
           userId: client1.id,
           originalMessage: spectatePayload,
         });
@@ -276,7 +281,7 @@ describe('collaboration', () => {
       client1.socket.emit(SPECTATING_UPDATE_EVENT, spectatePayload);
 
       // timeout
-      await sleep(5000);
+      await sleep(500);
       reject(new Error('No message received'));
     });
   });
