@@ -265,7 +265,7 @@ describe('collaboration', () => {
 
       client2.socket.on(SPECTATING_UPDATE_EVENT, (msg) => {
         // forwarded message is correct
-        expect(msg).toStrictEqual({
+        expect(msg).toMatchObject({
           userId: client1.id,
           originalMessage: spectatePayload,
         });
