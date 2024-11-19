@@ -10,7 +10,7 @@ import { initialData } from './initialData';
 export class SpectateConfigsService implements SpectateConfigInterface {
   constructor(
     @InjectModel(SpectateConfig.name)
-    private spectateConfigModel: Model<SpectateConfig> | null
+    private spectateConfigModel: Model<SpectateConfig> | null,
   ) {}
 
   async create(

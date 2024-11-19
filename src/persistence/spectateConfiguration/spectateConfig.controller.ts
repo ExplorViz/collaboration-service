@@ -1,11 +1,22 @@
-import { Body, Controller, Delete, Get, Inject, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Post,
+  Put,
+} from '@nestjs/common';
 import { CreateSpectateConfigDto } from '../dto/create-spectateConfig.dto';
 import { SpectateConfig } from './spectateConfig.schema';
 import { SpectateConfigInterface } from './spectateConfig.interface';
 
 @Controller('spectateConfig')
 export class SpectateConfigController {
-  constructor(@Inject('SpectateConfigInterface') private readonly spectateConfigService: SpectateConfigInterface) {}
+  constructor(
+    @Inject('SpectateConfigInterface')
+    private readonly spectateConfigService: SpectateConfigInterface,
+  ) {}
 
   @Post('/add')
   async createConfig(

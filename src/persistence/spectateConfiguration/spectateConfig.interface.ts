@@ -1,9 +1,9 @@
 export interface SpectateConfigInterface {
-    getAllConfigs(): Promise<any[]>;
+  getAllConfigs(): Promise<any[]>;
 
-    create(dto: any): any;
+  create(dto: any): any;
 
-    getConfigById(id: any): any;
+  getConfigById(id: any): any;
 
-    deleteConfigById(id: any): any;
+  deleteConfigById(id: any): any;
 }
