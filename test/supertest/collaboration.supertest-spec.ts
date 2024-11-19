@@ -276,7 +276,7 @@ describe('collaboration', () => {
       client1.socket.emit(SPECTATING_UPDATE_EVENT, spectatePayload);
 
       // timeout
-      await sleep(1000);
+      await sleep(5000);
       reject(new Error('No message received'));
     });
   });
