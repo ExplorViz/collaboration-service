@@ -20,6 +20,10 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "prepare": "husky"
   },
+  "engines": {
+    "npm": ">=10.0.0 <11.0.0",
+    "node": ">=22.0.0 <23.0.0"
+  },
   "dependencies": {
     "@liaoliaots/nestjs-redis": "^9.0.5",
     "@nestjs/common": "^9.4.3",
