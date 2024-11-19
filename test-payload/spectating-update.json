@@ -1,6 +1,6 @@
 {
   "isSpectating": true,
-  "spectatedUserId": "",
-  "spectatingUserIds": [""],
+  "spectatedUserId": "42",
+  "spectatingUserIds": ["21"],
   "configurationId": "default"
 }

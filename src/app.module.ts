@@ -12,6 +12,16 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { LockService } from './lock/lock.service';
 import { PublisherService } from './publisher/publisher.service';
 import { SubscriberService } from './subscriber/subscriber.service';
+import { MongoInitService } from './persistence/mongo-init.service';
+import { MongooseModule } from '@nestjs/mongoose';
+import {
+  SpectateConfig,
+  SpectateConfigSchema,
+} from './persistence/spectateConfiguration/spectateConfig.schema';
+import { SpectateConfigController } from './persistence/spectateConfiguration/spectateConfig.controller';
+import { SpectateConfigsService } from './persistence/spectateConfiguration/spectateConfig.service';
+import { SpectateConfigFallback } from './persistence/spectateConfiguration/spectateConfigFallback.service';
+
 import { ChatService } from './chat/chat.service';
 
 @Module({
@@ -41,4 +51,45 @@ import { ChatService } from './chat/chat.service';
   ],
   exports: [],
 })
-export class AppModule {}
+export class AppModule {
+  static async register() {
+    const mongoAvailable = await MongoInitService.isMongoAvailable();
+
+    const mongoImports = mongoAvailable
+      ? [
+          MongooseModule.forRoot(
+            process.env.MONGO_URI || 'mongodb://127.0.0.1:27018/collab_db',
+          ),
+          MongooseModule.forFeature([
+            { name: SpectateConfig.name, schema: SpectateConfigSchema },
+          ]),
+        ]
+      : [];
+
+    const mongoControllers = mongoAvailable ? [SpectateConfigController] : [];
+
+    const mongoProviders = mongoAvailable
+      ? [
+          {
+            provide: 'SpectateConfigInterface',
+            useClass: SpectateConfigsService,
+          },
+        ]
+      : [
+          {
+            provide: 'SpectateConfigInterface',
+            useClass: SpectateConfigFallback,
+          },
+        ];
+
+    const mongoExports = mongoAvailable ? ['SpectateConfigInterface'] : [];
+
+    return {
+      module: AppModule,
+      imports: [...mongoImports],
+      controllers: [...mongoControllers],
+      providers: [...mongoProviders],
+      exports: [...mongoExports],
+    };
+  }
+}

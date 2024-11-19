@@ -1,3 +1,4 @@
+import { Inject } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -7,7 +8,6 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import * as fs from 'node:fs';
 import { Server, Socket } from 'socket.io';
 import { MessageFactoryService } from 'src/factory/message-factory/message-factory.service';
 import { IdGenerationService } from 'src/id-generation/id-generation.service';
@@ -163,6 +163,8 @@ import {
 } from 'src/message/client/receivable/chat-sync-message';
 import { PublishIdMessage } from 'src/message/pubsub/publish-id-message';
 import { Room } from 'src/model/room-model';
+import { SpectateConfigInterface } from 'src/persistence/spectateConfiguration/spectateConfig.interface';
+import { SpectateConfigsService } from 'src/persistence/spectateConfiguration/spectateConfig.service';
 import { PublisherService } from 'src/publisher/publisher.service';
 import { RoomService } from 'src/room/room.service';
 import { SessionService } from 'src/session/session.service';
@@ -197,6 +199,8 @@ export class WebsocketGateway
     private readonly idGenerationService: IdGenerationService,
     private readonly lockService: LockService,
     private readonly publisherService: PublisherService,
+    @Inject('SpectateConfigInterface')
+    private readonly spectateConfigService: SpectateConfigInterface,
     private readonly chatService: ChatService,
   ) {}
 
@@ -694,10 +698,10 @@ export class WebsocketGateway
   }
 
   @SubscribeMessage(SPECTATING_UPDATE_EVENT)
-  handleSpectatingUpdateMessage(
+  async handleSpectatingUpdateMessage(
     @MessageBody() message: SpectatingUpdateMessage,
     @ConnectedSocket() client: Socket,
-  ): void {
+  ): Promise<void> {
     const session = this.sessionService.lookupSession(client);
     const roomId = session.getRoom().getRoomId();
 
@@ -717,14 +721,22 @@ export class WebsocketGateway
       });
     }
 
-    const spectateConfig: { deviceId: string; projectionMatrix: number[] }[] =
-      JSON.parse(
-        fs.readFileSync(
-          'src/config/spectate/' + message.configurationId + '.json',
-          'utf8',
-        ),
+    if (this.spectateConfigService instanceof SpectateConfigsService) {
+      const config = await this.spectateConfigService.getConfigById(
+        message.configurationId,
       );
-    message.configuration = spectateConfig;
+
+      let spectateConfig = null;
+
+      if (config.length > 0) {
+        spectateConfig = {
+          id: config[0].id,
+          devices: config[0].devices,
+        };
+      }
+
+      message.configuration = spectateConfig;
+    }
 
     const roomMessage =
       this.messageFactoryService.makeRoomForwardMessage<SpectatingUpdateMessage>(

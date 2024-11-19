@@ -3,3 +3,8 @@ services:
     image: redis:7.2.2
     ports:
       - '6379:6379'
+
+  mongoDB:
+   image: mongo:latest
+   ports:
+     - '27018:27017'

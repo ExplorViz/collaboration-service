@@ -5,7 +5,7 @@ include:
 default:
   tags:
     - exec-docker
-  image: node:latest
+  image: node:22-alpine
   cache: # Cache modules in between jobs
     key: $CI_COMMIT_REF_SLUG
     paths:
@@ -45,8 +45,10 @@ test:
   variables:
     REDIS_HOST: redis
     REDIS_PORT: '6379'
+    MONGO_URI: 'mongodb://mongo/collab_db'
   services:
     - name: redis:latest
+    - name: mongo:latest
   script:
     - npm run start &
     - sleep 10
