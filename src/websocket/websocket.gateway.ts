@@ -186,6 +186,10 @@ import {
   MESSAGE_DELETE_EVENT,
   MessageDeleteEvent,
 } from 'src/message/client/receivable/delete-message';
+import {
+  IMMERSIVE_VIEW_UPDATE_EVENT,
+  ImmersiveViewUpdateMessage,
+} from 'src/message/client/receivable/immersive-view-update-message';
 
 @WebSocketGateway({ cors: true })
 export class WebsocketGateway
@@ -581,6 +585,23 @@ export class WebsocketGateway
       );
     this.publisherService.publishRoomForwardMessage(
       HEATMAP_UPDATE_EVENT,
+      roomMessage,
+    );
+  }
+
+  @SubscribeMessage(IMMERSIVE_VIEW_UPDATE_EVENT)
+  handleImmersiveViewUpdateMessage(
+    @MessageBody() message: ImmersiveViewUpdateMessage,
+    @ConnectedSocket() client: Socket,
+  ): void {
+    console.log('websocket gateway immersive triggered!');
+    const roomMessage =
+      this.messageFactoryService.makeRoomForwardMessage<ImmersiveViewUpdateMessage>(
+        client,
+        message,
+      );
+    this.publisherService.publishRoomForwardMessage(
+      IMMERSIVE_VIEW_UPDATE_EVENT,
       roomMessage,
     );
   }
