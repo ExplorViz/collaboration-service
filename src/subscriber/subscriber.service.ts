@@ -674,7 +674,6 @@ export class SubscriberService {
     event: string,
     roomMessage: RoomForwardMessage<ImmersiveViewUpdateMessage>,
   ) {
-    console.log('subscriber service immersive triggered!');
     const message = roomMessage.message;
     this.websocketGateway.sendBroadcastForwardedMessage(
       event,

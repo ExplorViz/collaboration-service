@@ -594,7 +594,6 @@ export class WebsocketGateway
     @MessageBody() message: ImmersiveViewUpdateMessage,
     @ConnectedSocket() client: Socket,
   ): void {
-    console.log('websocket gateway immersive triggered!');
     const roomMessage =
       this.messageFactoryService.makeRoomForwardMessage<ImmersiveViewUpdateMessage>(
         client,
