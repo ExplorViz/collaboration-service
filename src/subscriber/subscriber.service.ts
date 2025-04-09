@@ -131,6 +131,10 @@ import {
   MESSAGE_DELETE_EVENT,
   MessageDeleteEvent,
 } from 'src/message/client/receivable/delete-message';
+import {
+  IMMERSIVE_VIEW_UPDATE_EVENT,
+  ImmersiveViewUpdateMessage,
+} from 'src/message/client/receivable/immersive-view-update-message';
 
 @Injectable()
 export class SubscriberService {
@@ -170,6 +174,9 @@ export class SubscriberService {
     );
     listener.set(HEATMAP_UPDATE_EVENT, (msg: any) =>
       this.handleHeatmapUpdateEvent(HEATMAP_UPDATE_EVENT, msg),
+    );
+    listener.set(IMMERSIVE_VIEW_UPDATE_EVENT, (msg: any) =>
+      this.handleImmersiveViewUpdateEvent(IMMERSIVE_VIEW_UPDATE_EVENT, msg),
     );
     listener.set(HIGHLIGHTING_UPDATE_EVENT, (msg: any) =>
       this.handleHighlightingUpdateEvent(HIGHLIGHTING_UPDATE_EVENT, msg),
@@ -654,6 +661,18 @@ export class SubscriberService {
   private handlePingUpdateEvent(
     event: string,
     roomMessage: RoomForwardMessage<PingUpdateMessage>,
+  ) {
+    const message = roomMessage.message;
+    this.websocketGateway.sendBroadcastForwardedMessage(
+      event,
+      roomMessage.roomId,
+      { userId: roomMessage.userId, originalMessage: message },
+    );
+  }
+
+  private handleImmersiveViewUpdateEvent(
+    event: string,
+    roomMessage: RoomForwardMessage<ImmersiveViewUpdateMessage>,
   ) {
     const message = roomMessage.message;
     this.websocketGateway.sendBroadcastForwardedMessage(
