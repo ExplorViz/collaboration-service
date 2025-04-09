@@ -2,6 +2,6 @@ export const IMMERSIVE_VIEW_UPDATE_EVENT = 'immersive_view_update';
 
 export type ImmersiveViewUpdateMessage = {
   event: typeof IMMERSIVE_VIEW_UPDATE_EVENT;
-  clazzId: string;
-  EnteredOrExited: string;
+  classId: string;
+  didEnterView: boolean;
 };
