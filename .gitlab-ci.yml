@@ -46,9 +46,13 @@ test:
     REDIS_HOST: redis
     REDIS_PORT: '6379'
     MONGO_URI: 'mongodb://mongo/collab_db'
+    DOCKER_DRIVER: overlay2
   services:
-    - name: redis:latest
-    - name: mongo:latest
+    # Use older versions that do not require AVX support for CPU
+    - name: redis:6.2-alpine
+      alias: redis
+    - name: mongo:4.4
+      alias: mongo
   script:
     - npm run start &
     - sleep 10
