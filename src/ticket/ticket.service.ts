@@ -1,10 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { IdGenerationService } from 'src/id-generation/id-generation.service';
-import { RedisService } from '@liaoliaots/nestjs-redis';
 import { RoomService } from 'src/room/room.service';
 import { Ticket } from 'src/util/ticket';
 import { v4 as uuidv4 } from 'uuid';
-import { Redis } from 'ioredis';
+import { RedisClientType } from 'redis';
 
 /**
  * Manages drawn tickets that have not yet been used to establish the websocket
@@ -17,15 +16,11 @@ import { Redis } from 'ioredis';
  */
 @Injectable()
 export class TicketService {
-  private readonly redis: Redis;
-
   constructor(
-    private readonly redisService: RedisService,
+    @Inject('REDIS_CLIENT') private readonly redis: RedisClientType,
     private readonly roomService: RoomService,
     private readonly idGenerationService: IdGenerationService,
-  ) {
-    this.redis = this.redisService.getClient().duplicate();
-  }
+  ) {}
 
   /**
    * Time for how long a ticket is valid.
@@ -110,6 +105,6 @@ export class TicketService {
 
   private async getTicket(ticketId: string): Promise<Ticket | null> {
     const ticket = await this.redis.get(this.getTicketKey(ticketId));
-    return ticket ? JSON.parse(ticket) : null;
+    return ticket ? JSON.parse(ticket as string) : null;
   }
 }

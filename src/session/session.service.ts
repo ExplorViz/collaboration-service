@@ -36,9 +36,9 @@ export class SessionService {
    * Looks up an active session by the corresponding WebSocket object.
    *
    * @param socket The WebSocket object
-   * @returns The session
+   * @returns The session or undefined if not found
    */
-  lookupSession(socket: Socket): Session {
+  lookupSession(socket: Socket): Session | undefined {
     return this.sessions.get(socket);
   }
 

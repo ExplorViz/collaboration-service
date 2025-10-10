@@ -1,16 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { Redis } from 'ioredis';
-import { RedisService } from '@liaoliaots/nestjs-redis';
+import { Injectable, Inject } from '@nestjs/common';
+import { RedisClientType } from 'redis';
 
 const UNIQUE_ID_KEY = 'unique_id';
 
 @Injectable()
 export class IdGenerationService {
-  private readonly redis: Redis;
-
-  constructor(private readonly redisService: RedisService) {
-    this.redis = this.redisService.getClient().duplicate();
-  }
+  constructor(
+    @Inject('REDIS_CLIENT') private readonly redis: RedisClientType,
+  ) {}
 
   /**
    * Generates a unique ID among all distributed replicas
@@ -22,8 +19,8 @@ export class IdGenerationService {
   }
 
   private async getUniqueId(): Promise<number> {
-    await this.redis.setnx(UNIQUE_ID_KEY, 0);
-    const nextUniqueKey = this.redis.incr(UNIQUE_ID_KEY);
+    await this.redis.setNX(UNIQUE_ID_KEY, '0');
+    const nextUniqueKey = await this.redis.incr(UNIQUE_ID_KEY);
     return nextUniqueKey;
   }
 }

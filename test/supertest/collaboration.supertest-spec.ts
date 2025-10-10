@@ -1,15 +1,16 @@
-import * as request from 'supertest';
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { io, type Socket } from 'socket.io-client';
-import { MENU_DETACHED_EVENT } from 'src/message/client/receivable/menu-detached-message';
-import { DETACHED_MENU_CLOSED_EVENT } from 'src/message/client/receivable/detached-menu-closed-message';
-import { OBJECT_GRABBED_RESPONSE_EVENT } from 'src/message/client/sendable/object-grabbed-response';
-import { INITIAL_LANDSCAPE_EVENT } from 'src/message/client/sendable/initial-landscape-message';
-import { RoomListRecord } from 'src/payload/sendable/room-list';
+import { ANNOTATION_CLOSED_EVENT } from 'src/message/client/receivable/annotation-closed-message';
+import { ANNOTATION_EDIT_EVENT } from 'src/message/client/receivable/annotation-edit-message';
+import { ANNOTATION_OPENED_EVENT } from 'src/message/client/receivable/annotation-opened-message';
+import { ANNOTATION_UPDATED_EVENT } from 'src/message/client/receivable/annotation-updated-message';
 import { APP_CLOSED_EVENT } from 'src/message/client/receivable/app-closed-message';
 import { APP_OPENED_EVENT } from 'src/message/client/receivable/app-opened-message';
 import { COMPONENT_UPDATE_EVENT } from 'src/message/client/receivable/component-update-message';
+import { DETACHED_MENU_CLOSED_EVENT } from 'src/message/client/receivable/detached-menu-closed-message';
 import { HEATMAP_UPDATE_EVENT } from 'src/message/client/receivable/heatmap-update-message';
 import { HIGHLIGHTING_UPDATE_EVENT } from 'src/message/client/receivable/highlighting-update-message';
+import { MENU_DETACHED_EVENT } from 'src/message/client/receivable/menu-detached-message';
 import { MOUSE_PING_UPDATE_EVENT } from 'src/message/client/receivable/mouse-ping-update-message';
 import { OBJECT_GRABBED_EVENT } from 'src/message/client/receivable/object-grabbed-message';
 import { OBJECT_MOVED_EVENT } from 'src/message/client/receivable/object-moved-message';
@@ -18,40 +19,46 @@ import { PING_UPDATE_EVENT } from 'src/message/client/receivable/ping-update-mes
 import { SPECTATING_UPDATE_EVENT } from 'src/message/client/receivable/spectating-update-message';
 import { TIMESTAMP_UPDATE_EVENT } from 'src/message/client/receivable/timestamp-update-message';
 import { USER_POSITIONS_EVENT } from 'src/message/client/receivable/user-positions-message';
+import { ANNOTATION_EDIT_RESPONSE_EVENT } from 'src/message/client/sendable/annotation-edit-response-message';
+import { ANNOTATION_RESPONSE_EVENT } from 'src/message/client/sendable/annotation-response';
+import { ANNOTATION_UPDATED_RESPONSE_EVENT } from 'src/message/client/sendable/annotation-updated-response';
+import { INITIAL_LANDSCAPE_EVENT } from 'src/message/client/sendable/initial-landscape-message';
 import { MENU_DETACHED_RESPONSE_EVENT } from 'src/message/client/sendable/menu-detached-response';
 import { OBJECT_CLOSED_RESPONSE_EVENT } from 'src/message/client/sendable/object-closed-response';
+import { OBJECT_GRABBED_RESPONSE_EVENT } from 'src/message/client/sendable/object-grabbed-response';
 import { SELF_CONNECTED_EVENT } from 'src/message/client/sendable/self-connected-message';
-import initialRoomPayload = require('./../../test-payload/initial-room.json');
-import joinLobbyPayload = require('./../../test-payload/join-lobby.json');
-import highlightingUpdatePayload = require('./../../test-payload/highlighting-update.json');
-import componentOpenPayload = require('./../../test-payload/component-update-open.json');
-import mousePingPayload = require('./../../test-payload/mouse-ping-update.json');
-import spectatePayload = require('./../../test-payload/spectating-update.json');
-import heatmapPayload = require('./../../test-payload/heatmap-update.json');
-import controllerPingPayload = require('./../../test-payload/ping-update.json');
-import appOpenedPayload = require('./../../test-payload/app-opened.json');
-import appClosedPayload = require('./../../test-payload/app-closed.json');
-import componentClosePayload = require('./../../test-payload/component-update-close.json');
-import timestamtPayload = require('./../../test-payload/timestamp-update.json');
-import menuDetachedPayload = require('./../../test-payload/menu-detached.json');
-import annotationPayload = require('./../../test-payload/annotation.json');
-import closeMenuDetachedPayload = require('./../../test-payload/detached-menu-closed.json');
-import closeAnnotationPayload = require('./../../test-payload/annotation-closed.json');
-import userPositionsPayload = require('./../../test-payload/user-positions.json');
-import grabObjectPayload = require('./../../test-payload/object-grabbed.json');
-import moveObjectPayload = require('./../../test-payload/object-moved.json');
-import releaseObjectPayload = require('./../../test-payload/object-released.json');
-import annotationEditPayload = require('./../../test-payload/annotation-edit.json');
-import annotationUpdatedPayload = require('./../../test-payload/annotation-updated.json');
-import { ANNOTATION_OPENED_EVENT } from 'src/message/client/receivable/annotation-opened-message';
-import { ANNOTATION_RESPONSE_EVENT } from 'src/message/client/sendable/annotation-response';
-import { ANNOTATION_CLOSED_EVENT } from 'src/message/client/receivable/annotation-closed-message';
-import { ANNOTATION_EDIT_EVENT } from 'src/message/client/receivable/annotation-edit-message';
-import { ANNOTATION_EDIT_RESPONSE_EVENT } from 'src/message/client/sendable/annotation-edit-response-message';
-import { ANNOTATION_UPDATED_EVENT } from 'src/message/client/receivable/annotation-updated-message';
-import { ANNOTATION_UPDATED_RESPONSE_EVENT } from 'src/message/client/sendable/annotation-updated-response';
+import { RoomListRecord } from 'src/payload/sendable/room-list';
+import * as request from 'supertest';
 
-// Firstly, start the app via 'npm run start'. Then, execute the tests via 'npm run test:supertest'.
+const initialRoomPayload = require('test/payload/initial-room.json');
+const joinLobbyPayload = require('test/payload/join-lobby.json');
+const highlightingUpdatePayload = require('test/payload/highlighting-update.json');
+const componentOpenPayload = require('test/payload/component-update-open.json');
+const mousePingPayload = require('test/payload/mouse-ping-update.json');
+const spectatePayload = require('test/payload/spectating-update.json');
+const heatmapPayload = require('test/payload/heatmap-update.json');
+const controllerPingPayload = require('test/payload/ping-update.json');
+const appOpenedPayload = require('test/payload/app-opened.json');
+const appClosedPayload = require('test/payload/app-closed.json');
+const componentClosePayload = require('test/payload/component-update-close.json');
+const timestamtPayload = require('test/payload/timestamp-update.json');
+const menuDetachedPayload = require('test/payload/menu-detached.json');
+const annotationPayload = require('test/payload/annotation.json');
+const closeMenuDetachedPayload = require('test/payload/detached-menu-closed.json');
+const closeAnnotationPayload = require('test/payload/annotation-closed.json');
+const userPositionsPayload = require('test/payload/user-positions.json');
+const grabObjectPayload = require('test/payload/object-grabbed.json');
+const moveObjectPayload = require('test/payload/object-moved.json');
+const releaseObjectPayload = require('test/payload/object-released.json');
+const annotationEditPayload = require('test/payload/annotation-edit.json');
+const annotationUpdatedPayload = require('test/payload/annotation-updated.json');
+// SETUP INSTRUCTIONS:
+// 1. Start the application server: npm run start
+// 2. Wait for the server to be ready (should be running on port 4444)
+// 3. Run the tests: npm run test:supertest
+//
+// NOTE: These are integration tests that require the application server to be running.
+// The tests will fail with AggregateError if the server is not accessible.
 
 // config
 const host = process.env.NEST_HOST || 'localhost';
@@ -63,6 +70,16 @@ type CollaborationClient = {
   id: string;
   socket: Socket;
 };
+
+async function checkServerHealth(): Promise<boolean> {
+  try {
+    const response = await request(baseURL).get('/rooms').timeout(5000);
+    return response.status === 200;
+  } catch (error) {
+    console.error('Server health check failed:', error.message);
+    return false;
+  }
+}
 
 async function getRooms(): Promise<RoomListRecord[]> {
   const response = await request(baseURL).get('/rooms');
@@ -104,6 +121,15 @@ function sleep(ms: number) {
 
 // test
 describe('room', () => {
+  beforeAll(async () => {
+    const isServerHealthy = await checkServerHealth();
+    if (!isServerHealthy) {
+      throw new Error(
+        `Server is not accessible at ${baseURL}. ` +
+          'Please ensure the application is running with "npm run start" before running these tests.',
+      );
+    }
+  });
   it('create room', async () => {
     // create room
     const roomId = await createRoom();
@@ -186,6 +212,16 @@ describe('collaboration', () => {
   let client1: CollaborationClient;
   let client2: CollaborationClient;
 
+  beforeAll(async () => {
+    const isServerHealthy = await checkServerHealth();
+    if (!isServerHealthy) {
+      throw new Error(
+        `Server is not accessible at ${baseURL}. ` +
+          'Please ensure the application is running with "npm run start" before running these tests.',
+      );
+    }
+  });
+
   beforeEach(async () => {
     const roomId = await createRoom();
     await sleep(500);
@@ -194,8 +230,12 @@ describe('collaboration', () => {
   });
 
   afterEach(() => {
-    client1.socket.disconnect();
-    client2.socket.disconnect();
+    if (client1?.socket) {
+      client1.socket.disconnect();
+    }
+    if (client2?.socket) {
+      client2.socket.disconnect();
+    }
   });
 
   it('highlight component', async () => {
@@ -433,7 +473,7 @@ describe('collaboration', () => {
       await sleep(500);
 
       // response including menu id were received
-      expect(menuId).toBeDefined;
+      expect(menuId).toBeDefined();
       closeMenuDetachedPayload.menuId = menuId;
 
       // close menu
@@ -504,7 +544,7 @@ describe('collaboration', () => {
       await sleep(500);
 
       // response including menu id were received
-      expect(menuId).toBeDefined;
+      expect(menuId).toBeDefined();
       closeAnnotationPayload.menuId = menuId;
 
       // close annotation

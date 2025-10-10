@@ -15,9 +15,18 @@ Service that enables collaborative features for ExplorViz.
 
 ## Testing
 
+### Unit Tests
+
+- Run unit tests: `npm test`
+
+### Integration Tests
+
 - Start local Redis instance: `docker compose -f .dev/compose.yaml up -d`
-- Start application: `npm start`
-- Start tests: `npm test`
+- Start application: `npm run start`
+- Wait for the server to be ready (running on port 4444)
+- Run integration tests: `npm run test:supertest`
+
+**Note:** Integration tests require the application server to be running. The tests will fail with connection errors if the server is not accessible.
 
 ## Building
 

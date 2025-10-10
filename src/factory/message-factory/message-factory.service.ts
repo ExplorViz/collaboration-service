@@ -24,6 +24,9 @@ export class MessageFactoryService {
 
   makeRoomForwardMessage<T>(client: Socket, message: T): RoomForwardMessage<T> {
     const session = this.sessionService.lookupSession(client);
+    if (!session) {
+      throw new Error(`No session found for socket ${client.id}`);
+    }
     return {
       roomId: session.getRoom().getRoomId(),
       userId: session.getUser().getId(),

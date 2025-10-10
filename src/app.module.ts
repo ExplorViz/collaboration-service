@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
-import { RedisModule } from '@liaoliaots/nestjs-redis';
+import { createClient } from 'redis';
+import { Redis } from 'ioredis';
 import { RoomService } from './room/room.service';
 import { IdGenerationService } from './id-generation/id-generation.service';
 import { RoomFactoryService } from './factory/room-factory/room-factory.service';
@@ -25,18 +26,47 @@ import { SpectateConfigFallback } from './persistence/spectateConfiguration/spec
 import { ChatService } from './chat/chat.service';
 
 @Module({
-  imports: [
-    RedisModule.forRoot({
-      config: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        password: process.env.REDIS_PASSWORD || '',
-      },
-    }),
-    ScheduleModule.forRoot(),
-  ],
+  imports: [ScheduleModule.forRoot()],
   controllers: [AppController],
   providers: [
+    {
+      provide: 'REDIS_CLIENT',
+      useFactory: async () => {
+        const client = createClient({
+          socket: {
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT || '6379'),
+          },
+          password: process.env.REDIS_PASSWORD || '',
+        });
+        await client.connect();
+        return client;
+      },
+    },
+    {
+      provide: 'REDIS_PUBSUB_CLIENT',
+      useFactory: async () => {
+        const client = createClient({
+          socket: {
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT || '6379'),
+          },
+          password: process.env.REDIS_PASSWORD || '',
+        });
+        await client.connect();
+        return client;
+      },
+    },
+    {
+      provide: 'IOREDIS_CLIENT',
+      useFactory: () => {
+        return new Redis({
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379'),
+          password: process.env.REDIS_PASSWORD || '',
+        });
+      },
+    },
     RoomFactoryService,
     RoomService,
     WebsocketGateway,

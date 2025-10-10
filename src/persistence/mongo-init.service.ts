@@ -12,7 +12,7 @@ export class MongoInitService {
       Logger.log('MongoDB connection successful.');
       await mongoose.disconnect();
       return true;
-    } catch (err) {
+    } catch {
       Logger.warn('MongoDB not available.');
       await mongoose.disconnect();
       return false;

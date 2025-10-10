@@ -1,5 +1,1 @@
-export type JoinLobbyPayload = {
-  //userName: string;
-  //position: Position;
-  //quaternion: Quaternion;
-};
+export type JoinLobbyPayload = Record<string, never>;

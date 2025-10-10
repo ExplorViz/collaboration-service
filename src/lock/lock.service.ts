@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { GrabbableObjectModel } from 'src/model/grabbable-object-model';
 import Redlock from 'redlock';
-import { RedisService } from '@liaoliaots/nestjs-redis';
+import { Redis } from 'ioredis';
 import { GrabbableObjectLock } from 'src/util/grabbable-object-lock';
 import { UserModel } from 'src/model/user-model';
 import { Room } from 'src/model/room-model';
@@ -12,8 +12,8 @@ export class LockService {
 
   private grabbableObjectLocks: Map<string, GrabbableObjectLock> = new Map();
 
-  constructor(private readonly redisService: RedisService) {
-    this.redlock = new Redlock([this.redisService.getClient().duplicate()], {
+  constructor(@Inject('IOREDIS_CLIENT') private readonly redis: Redis) {
+    this.redlock = new Redlock([this.redis.duplicate()], {
       retryCount: 3,
       retryDelay: 50,
     });
@@ -52,7 +52,7 @@ export class LockService {
       const grabbableObjectLock = new GrabbableObjectLock(user, object, lock);
       this.grabbableObjectLocks.set(object.getGrabId(), grabbableObjectLock);
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -79,7 +79,7 @@ export class LockService {
         500,
       );
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -114,7 +114,7 @@ export class LockService {
         [this.getTimestampLockResource(room.getRoomId())],
         Number.MAX_SAFE_INTEGER,
       );
-    } catch (error) {
+    } catch {
       return null;
     }
   }

@@ -1,6 +1,5 @@
-import { RedisService } from '@liaoliaots/nestjs-redis';
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
-import { Redis } from 'ioredis';
+import { RedisClientType } from 'redis';
 import {
   ALL_HIGHLIGHTS_RESET_EVENT,
   AllHighlightsResetMessage,
@@ -138,16 +137,12 @@ import {
 
 @Injectable()
 export class SubscriberService {
-  private readonly redis: Redis;
-
   constructor(
-    private readonly redisService: RedisService,
+    @Inject('REDIS_PUBSUB_CLIENT') private readonly redis: RedisClientType,
     private readonly roomService: RoomService,
     @Inject(forwardRef(() => WebsocketGateway))
     private readonly websocketGateway: WebsocketGateway,
   ) {
-    this.redis = this.redisService.getClient().duplicate();
-
     // Register callbacks for Redis notifications
     const listener: Map<string, (...args: any) => void> = new Map();
     listener.set(CREATE_ROOM_EVENT, this.handleCreateRoomEvent.bind(this));
@@ -247,16 +242,14 @@ export class SubscriberService {
 
     // Subscribe to Redis channels
     for (const channel of listener.keys()) {
-      this.redis.subscribe(channel);
+      this.redis.subscribe(channel, (message: string) => {
+        const parsedMessage = JSON.parse(message);
+        if (listener.has(channel)) {
+          // Invoke event-specific callback
+          listener.get(channel)(parsedMessage);
+        }
+      });
     }
-
-    this.redis.on('message', (channel: string, data: string) => {
-      const message = JSON.parse(data);
-      if (listener.has(channel)) {
-        // Invoke event-specific callback
-        listener.get(channel)(message);
-      }
-    });
   }
 
   // SUBSCRIPTION HANDLERS

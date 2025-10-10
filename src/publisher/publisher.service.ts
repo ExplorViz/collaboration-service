@@ -1,20 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import {
   CreateRoomMessage,
   CREATE_ROOM_EVENT,
 } from 'src/message/pubsub/create-room-message';
 import { RoomForwardMessage } from 'src/message/pubsub/room-forward-message';
 import { RoomStatusMessage } from 'src/message/pubsub/room-status-message';
-import { Redis } from 'ioredis';
-import { RedisService } from '@liaoliaots/nestjs-redis';
+import { RedisClientType } from 'redis';
 
 @Injectable()
 export class PublisherService {
-  private readonly redis: Redis;
-
-  constructor(private readonly redisService: RedisService) {
-    this.redis = this.redisService.getClient().duplicate();
-  }
+  constructor(
+    @Inject('REDIS_CLIENT') private readonly redis: RedisClientType,
+  ) {}
 
   /**
    * Publishes the creation of a room to Redis.
