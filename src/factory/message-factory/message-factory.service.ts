@@ -1,22 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { Socket } from 'socket.io';
 import {
-  HighlightingObject,
   InitialAnnotation,
-  InitialApp,
   InitialDetachedMenu,
   InitialLandscapeMessage,
 } from 'src/message/client/sendable/initial-landscape-message';
 import { SelfConnectedMessage } from 'src/message/client/sendable/self-connected-message';
 import { RoomForwardMessage } from 'src/message/pubsub/room-forward-message';
 import { RoomStatusMessage } from 'src/message/pubsub/room-status-message';
-import { HighlightingModel } from 'src/model/highlighting-model';
 import { Room } from 'src/model/room-model';
 import { UserModel } from 'src/model/user-model';
 import { Landscape } from 'src/payload/receivable/initial-room';
 import { SessionService } from 'src/session/session.service';
 import { Controller } from 'src/util/controller';
-import { User, OtherUser } from 'src/util/user';
+import { OtherUser, User } from 'src/util/user';
 
 @Injectable()
 export class MessageFactoryService {
@@ -81,73 +78,17 @@ export class MessageFactoryService {
   }
 
   makeInitialLandscapeMessage(room: Room): InitialLandscapeMessage {
-    const externCommunicationLinks: HighlightingObject[] = [];
-
-    const appArray: InitialApp[] = [];
-    for (const app of room.getApplicationModifier().getApplications()) {
-      const componentHighlightedArray: HighlightingObject[] = [];
-      for (const user of room.getUserModifier().getUsers()) {
-        if (user.containsHighlightedEntity()) {
-          const highlighted: HighlightingModel[] =
-            user.getHighlightedEntities();
-
-          for (const highlightedEntity of highlighted) {
-            if (highlightedEntity.getHighlightedApp() == app.getId()) {
-              const highlightingObj: HighlightingObject = {
-                userId: user.getId(),
-                appId: highlightedEntity.getHighlightedApp(),
-                entityType: highlightedEntity.getEntityType(),
-                entityId: highlightedEntity.getHighlightedEntity(),
-                isHighlighted: true,
-                color: [
-                  user.getColor().red,
-                  user.getColor().green,
-                  user.getColor().blue,
-                ],
-              };
-              componentHighlightedArray.push(highlightingObj);
-            } else if (highlightedEntity.getHighlightedApp() == '') {
-              const highlightingObj: HighlightingObject = {
-                userId: user.getId(),
-                appId: highlightedEntity.getHighlightedApp(),
-                entityType: highlightedEntity.getEntityType(),
-                entityId: highlightedEntity.getHighlightedEntity(),
-                isHighlighted: true,
-                color: [
-                  user.getColor().red,
-                  user.getColor().green,
-                  user.getColor().blue,
-                ],
-              };
-              componentHighlightedArray.push(highlightingObj);
-
-              let isEntityIdInList = false;
-              const id = highlightingObj.entityId;
-
-              for (const externCommunicationLink of externCommunicationLinks) {
-                if (externCommunicationLink.entityId === id) {
-                  isEntityIdInList = true;
-                  break;
-                }
-              }
-
-              if (!isEntityIdInList) {
-                externCommunicationLinks.push(highlightingObj);
-              }
-            }
-          }
-        }
+    const highlightedEntities: { userId: string; entityId: string }[] = [];
+    for (const user of room.getUserModifier().getUsers()) {
+      if (user.containsHighlightedEntity()) {
+        user.getHighlightedEntities().forEach((entityId) => {
+          const highlightingObj: { userId: string; entityId: string } = {
+            userId: user.getId(),
+            entityId: entityId,
+          };
+          highlightedEntities.push(highlightingObj);
+        });
       }
-
-      const appObj: InitialApp = {
-        id: app.getId(),
-        position: app.getPosition(),
-        quaternion: app.getQuaternion(),
-        scale: app.getScale(),
-        openComponents: app.getOpenComponents(),
-        highlightedComponents: componentHighlightedArray,
-      };
-      appArray.push(appObj);
     }
 
     const landscapeModel = room.getLandscapeModifier().getLandscape();
@@ -185,11 +126,11 @@ export class MessageFactoryService {
     }
 
     return {
-      openApps: appArray,
       landscape: landscapeObj,
+      closedComponents: landscapeModel.getClosedComponents(),
+      highlightedEntities: highlightedEntities,
       detachedMenus: detachedMenuArray,
       annotations: annotationArray,
-      highlightedExternCommunicationLinks: externCommunicationLinks,
     };
   }
 }

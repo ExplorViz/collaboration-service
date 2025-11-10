@@ -54,29 +54,19 @@ export class UserModifier {
 
   updateHighlighting(
     user: UserModel,
-    appId: string,
-    entityId: string,
-    entityType: string,
-    isHighlighted: boolean,
-    multiSelected: boolean,
+    entityIds: string[],
+    areHighlighted: boolean,
   ): void {
-    if (!isHighlighted && !multiSelected) {
+    if (areHighlighted) {
+      // Overwrite highlighting of other users
       for (const otherUser of Object.values(this.users)) {
-        otherUser.removeHighlightedEntity(entityId);
-      }
-    } else if (!isHighlighted && multiSelected) {
-      for (const highlightingModel of user.getHighlightedEntities()) {
-        for (const otherUser of Object.values(this.users)) {
-          if (otherUser.getId() !== user.getId()) {
-            otherUser.removeHighlightedEntity(
-              highlightingModel.getHighlightedEntity,
-            );
-          }
+        if (otherUser.getId() !== user.getId()) {
+          otherUser.removeHighlightedEntityIds(entityIds);
         }
       }
-      user.removeAllHighlightedEntities();
+      user.addHighlightedEntityIds(entityIds);
     } else {
-      user.setHighlightedEntity(appId, entityType, entityId);
+      user.removeHighlightedEntityIds(entityIds);
     }
   }
 

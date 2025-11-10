@@ -102,7 +102,6 @@ export class AppController {
       roomId,
       initialRoom: {
         landscape: landscape,
-        openApps: body.openApps,
         detachedMenus: detachedMenus,
         annotations: annotations,
       },

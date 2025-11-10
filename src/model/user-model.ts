@@ -1,7 +1,6 @@
 import { Color } from 'src/util/color';
 import { BaseModel } from './base-model';
 import { ControllerModel } from './controller-model';
-import { HighlightingModel } from './highlighting-model';
 
 export enum UserState {
   CONNECTING = 'CONNECTING',
@@ -16,8 +15,7 @@ export class UserModel extends BaseModel {
   private state: UserState;
   private timeOfLastMessage: number;
   private readonly color: Color;
-  private hasHighlightedEntity: boolean;
-  private highlightedEntities: HighlightingModel[];
+  private highlightedEntityIds: Set<string>;
 
   constructor(
     id: string,
@@ -34,7 +32,7 @@ export class UserModel extends BaseModel {
     this.controllers = new Map();
     this.setPosition(position);
     this.setQuaternion(quaternion);
-    this.highlightedEntities = [];
+    this.highlightedEntityIds = new Set();
   }
 
   getColor(): Color {
@@ -82,29 +80,26 @@ export class UserModel extends BaseModel {
   }
 
   containsHighlightedEntity(): boolean {
-    return this.hasHighlightedEntity;
+    return this.highlightedEntityIds.size > 0;
   }
 
-  setHighlighted(isHighlighted: boolean): void {
-    this.hasHighlightedEntity = isHighlighted;
-  }
-
-  setHighlightedEntity(
-    appId: string,
-    entityType: string,
-    entityId: string,
-  ): void {
-    this.setHighlighted(true);
-    this.highlightedEntities.push(
-      new HighlightingModel(appId, entityId, entityType),
+  addHighlightedEntityIds(entityIds: string[]): void {
+    this.highlightedEntityIds = this.highlightedEntityIds.union(
+      new Set(entityIds),
     );
   }
 
-  getHighlightedEntities(): HighlightingModel[] {
-    return this.highlightedEntities;
+  removeHighlightedEntityIds(entityIds: string[]): void {
+    this.highlightedEntityIds = this.highlightedEntityIds.difference(
+      new Set(entityIds),
+    );
+  }
+
+  getHighlightedEntities(): string[] {
+    return Array.from(this.highlightedEntityIds);
   }
 
   removeAllHighlightedEntities(): void {
-    this.highlightedEntities = [];
+    this.highlightedEntityIds.clear();
   }
 }

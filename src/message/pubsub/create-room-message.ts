@@ -1,6 +1,5 @@
 import {
   Annotation,
-  App,
   DetachedMenu,
   Landscape,
 } from 'src/payload/receivable/initial-room';
@@ -14,7 +13,6 @@ export type CreateRoomMessage = {
 
 export type PublishedInitialRoom = {
   landscape: PublishedLandscape;
-  openApps: App[];
   detachedMenus: PublishedDetachedMenu[];
   annotations: PublishedAnnotation[];
 };

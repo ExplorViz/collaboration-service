@@ -3,7 +3,7 @@ import { RedisClientType } from 'redis';
 import {
   ALL_HIGHLIGHTS_RESET_EVENT,
   AllHighlightsResetMessage,
-} from 'src/message/client/receivable/all-highlights-reset-message';
+} from 'src/message/client/receivable/reset-highlighting-message';
 import {
   ANNOTATION_CLOSED_EVENT,
   AnnotationClosedMessage,
@@ -16,14 +16,6 @@ import {
   ANNOTATION_UPDATED_EVENT,
   AnnotationUpdatedMessage,
 } from 'src/message/client/receivable/annotation-updated-message';
-import {
-  APP_CLOSED_EVENT,
-  AppClosedMessage,
-} from 'src/message/client/receivable/app-closed-message';
-import {
-  APP_OPENED_EVENT,
-  AppOpenedMessage,
-} from 'src/message/client/receivable/app-opened-message';
 import {
   CHANGE_LANDSCAPE_EVENT,
   ChangeLandscapeMessage,
@@ -158,9 +150,6 @@ export class SubscriberService {
     listener.set(ANNOTATION_OPENED_EVENT, (msg: any) =>
       this.handleAnnotationEvent(ANNOTATION_OPENED_EVENT, msg),
     );
-    listener.set(APP_OPENED_EVENT, (msg: any) =>
-      this.handleAppOpenedEvent(APP_OPENED_EVENT, msg),
-    );
     listener.set(CHANGE_LANDSCAPE_EVENT, (msg: any) =>
       this.handleChangeLandscapeEvent(CHANGE_LANDSCAPE_EVENT, msg),
     );
@@ -212,9 +201,6 @@ export class SubscriberService {
     listener.set(OBJECT_MOVED_EVENT, (msg: any) =>
       this.handleObjectMovedEvent(OBJECT_MOVED_EVENT, msg),
     );
-    listener.set(APP_CLOSED_EVENT, (msg: any) =>
-      this.handleAppClosedEvent(APP_CLOSED_EVENT, msg),
-    );
     listener.set(DETACHED_MENU_CLOSED_EVENT, (msg: any) =>
       this.handleDetachedMenuClosedEvent(DETACHED_MENU_CLOSED_EVENT, msg),
     );
@@ -257,7 +243,7 @@ export class SubscriberService {
   private handleCreateRoomEvent(message: CreateRoomMessage) {
     const publishedLandscape = message.initialRoom.landscape;
 
-    // Initiliaze room and landscape
+    // Initialize room and landscape
     const room = this.roomService.createRoom(
       message.roomId,
       publishedLandscape.id,
@@ -268,18 +254,6 @@ export class SubscriberService {
         publishedLandscape.landscape.landscapeToken,
         publishedLandscape.landscape.timestamp,
       );
-
-    // Initialize apps and components
-    for (const app of message.initialRoom.openApps) {
-      room
-        .getApplicationModifier()
-        .openApplication(app.id, app.position, app.quaternion, app.scale);
-      for (const componentId of app.openComponents) {
-        room
-          .getApplicationModifier()
-          .updateComponent(componentId, app.id, false, true);
-      }
-    }
 
     // Initialize detached menus
     for (const detachedMenu of message.initialRoom.detachedMenus) {
@@ -331,20 +305,6 @@ export class SubscriberService {
         publishedLandscape.landscapeToken,
         publishedLandscape.timestamp,
       );
-
-    room.getApplicationModifier().closeAllApplications();
-
-    // Initialize apps and components
-    for (const app of roomMessage.message.openApps) {
-      room
-        .getApplicationModifier()
-        .openApplication(app.id, app.position, app.quaternion, app.scale);
-      for (const componentId of app.openComponents) {
-        room
-          .getApplicationModifier()
-          .updateComponent(componentId, app.id, false, true);
-      }
-    }
 
     room.getDetachedMenuModifier().closeAllDetachedMenus();
 
@@ -519,27 +479,6 @@ export class SubscriberService {
     );
   }
 
-  private handleAppOpenedEvent(
-    event: string,
-    roomMessage: RoomForwardMessage<AppOpenedMessage>,
-  ) {
-    const room = this.roomService.lookupRoom(roomMessage.roomId);
-    const message = roomMessage.message;
-    room
-      .getApplicationModifier()
-      .openApplication(
-        message.id,
-        message.position,
-        message.quaternion,
-        message.scale,
-      );
-    this.websocketGateway.sendBroadcastForwardedMessage(
-      event,
-      roomMessage.roomId,
-      { userId: roomMessage.userId, originalMessage: message },
-    );
-  }
-
   private handleChangeLandscapeEvent(
     event: string,
     roomMessage: RoomForwardMessage<ChangeLandscapeMessage>,
@@ -558,13 +497,8 @@ export class SubscriberService {
     const room = this.roomService.lookupRoom(roomMessage.roomId);
     const message = roomMessage.message;
     room
-      .getApplicationModifier()
-      .updateComponent(
-        message.componentId,
-        message.appId,
-        message.isFoundation,
-        message.isOpened,
-      );
+      .getLandscapeModifier()
+      .updateComponents(message.componentIds, message.areOpened);
     this.websocketGateway.sendBroadcastForwardedMessage(
       event,
       roomMessage.roomId,
@@ -598,14 +532,7 @@ export class SubscriberService {
     const message = roomMessage.message;
     room
       .getUserModifier()
-      .updateHighlighting(
-        user,
-        message.appId,
-        message.entityId,
-        message.entityType,
-        message.isHighlighted,
-        message.multiSelected,
-      );
+      .updateHighlighting(user, message.entityIds, message.areHighlighted);
     this.websocketGateway.sendBroadcastForwardedMessage(
       event,
       roomMessage.roomId,
@@ -711,7 +638,6 @@ export class SubscriberService {
     const room = this.roomService.lookupRoom(roomMessage.roomId);
     const message = roomMessage.message;
     room.getLandscapeModifier().updateTimestamp(message.timestamp);
-    room.getApplicationModifier().closeAllApplications();
     room.getDetachedMenuModifier().closeAllDetachedMenus();
     this.websocketGateway.sendBroadcastForwardedMessage(
       event,
@@ -789,20 +715,6 @@ export class SubscriberService {
         message.quaternion,
         message.scale,
       );
-    this.websocketGateway.sendBroadcastForwardedMessage(
-      event,
-      roomMessage.roomId,
-      { userId: roomMessage.userId, originalMessage: message },
-    );
-  }
-
-  private handleAppClosedEvent(
-    event: string,
-    roomMessage: RoomForwardMessage<AppClosedMessage>,
-  ) {
-    const room = this.roomService.lookupRoom(roomMessage.roomId);
-    const message = roomMessage.message;
-    room.getApplicationModifier().closeApplication(message.appId);
     this.websocketGateway.sendBroadcastForwardedMessage(
       event,
       roomMessage.roomId,

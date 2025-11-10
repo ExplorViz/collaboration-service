@@ -9,13 +9,10 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { ChatService } from 'src/chat/chat.service';
 import { MessageFactoryService } from 'src/factory/message-factory/message-factory.service';
 import { IdGenerationService } from 'src/id-generation/id-generation.service';
 import { LockService } from 'src/lock/lock.service';
-import {
-  ALL_HIGHLIGHTS_RESET_EVENT,
-  AllHighlightsResetMessage,
-} from 'src/message/client/receivable/all-highlights-reset-message';
 import {
   ANNOTATION_CLOSED_EVENT,
   AnnotationClosedMessage,
@@ -33,21 +30,25 @@ import {
   AnnotationUpdatedMessage,
 } from 'src/message/client/receivable/annotation-updated-message';
 import {
-  APP_CLOSED_EVENT,
-  AppClosedMessage,
-} from 'src/message/client/receivable/app-closed-message';
-import {
-  APP_OPENED_EVENT,
-  AppOpenedMessage,
-} from 'src/message/client/receivable/app-opened-message';
-import {
   CHANGE_LANDSCAPE_EVENT,
   ChangeLandscapeMessage,
 } from 'src/message/client/receivable/change-landscape-message';
 import {
+  CHAT_MESSAGE_EVENT,
+  ChatMessage,
+} from 'src/message/client/receivable/chat-message';
+import {
+  CHAT_SYNC_EVENT,
+  ChatSynchronizeMessage,
+} from 'src/message/client/receivable/chat-sync-message';
+import {
   COMPONENT_UPDATE_EVENT,
   ComponentUpdateMessage,
 } from 'src/message/client/receivable/component-update-message';
+import {
+  MESSAGE_DELETE_EVENT,
+  MessageDeleteEvent,
+} from 'src/message/client/receivable/delete-message';
 import {
   DETACHED_MENU_CLOSED_EVENT,
   DetachedMenuClosedMessage,
@@ -61,6 +62,10 @@ import {
   HighlightingUpdateMessage,
 } from 'src/message/client/receivable/highlighting-update-message';
 import {
+  IMMERSIVE_VIEW_UPDATE_EVENT,
+  ImmersiveViewUpdateMessage,
+} from 'src/message/client/receivable/immersive-view-update-message';
+import {
   JOIN_VR_EVENT,
   JoinVrMessage,
 } from 'src/message/client/receivable/join-vr-message';
@@ -72,6 +77,10 @@ import {
   MOUSE_PING_UPDATE_EVENT,
   MousePingUpdateMessage,
 } from 'src/message/client/receivable/mouse-ping-update-message';
+import {
+  USER_MUTE_EVENT,
+  UserMuteUpdate,
+} from 'src/message/client/receivable/mute-update-message';
 import {
   OBJECT_GRABBED_EVENT,
   ObjectGrabbedMessage,
@@ -88,6 +97,10 @@ import {
   PING_UPDATE_EVENT,
   PingUpdateMessage,
 } from 'src/message/client/receivable/ping-update-message';
+import {
+  ALL_HIGHLIGHTS_RESET_EVENT,
+  AllHighlightsResetMessage,
+} from 'src/message/client/receivable/reset-highlighting-message';
 import {
   SHARE_SETTINGS_EVENT,
   ShareSettingsMessage,
@@ -113,6 +126,10 @@ import {
   UserControllerDisconnectMessage,
 } from 'src/message/client/receivable/user-controller-disconnect-message';
 import {
+  USER_KICK_EVENT,
+  UserKickEvent,
+} from 'src/message/client/receivable/user-kick-event';
+import {
   USER_POSITIONS_EVENT,
   UserPositionsMessage,
 } from 'src/message/client/receivable/user-positions-message';
@@ -129,6 +146,7 @@ import {
   ANNOTATION_UPDATED_RESPONSE_EVENT,
   AnnotationUpdatedResponse,
 } from 'src/message/client/sendable/annotation-updated-response';
+import { ChatSynchronizeResponse } from 'src/message/client/sendable/chat-sync-response';
 import { ForwardedMessage } from 'src/message/client/sendable/forwarded-message';
 import { INITIAL_LANDSCAPE_EVENT } from 'src/message/client/sendable/initial-landscape-message';
 import {
@@ -153,14 +171,6 @@ import {
   USER_DISCONNECTED_EVENT,
   UserDisconnectedMessage,
 } from 'src/message/client/sendable/user-disconnected-message';
-import {
-  ChatMessage,
-  CHAT_MESSAGE_EVENT,
-} from 'src/message/client/receivable/chat-message';
-import {
-  CHAT_SYNC_EVENT,
-  ChatSynchronizeMessage,
-} from 'src/message/client/receivable/chat-sync-message';
 import { PublishIdMessage } from 'src/message/pubsub/publish-id-message';
 import { Room } from 'src/model/room-model';
 import { SpectateConfigInterface } from 'src/persistence/spectateConfiguration/spectateConfig.interface';
@@ -172,24 +182,6 @@ import { TicketService } from 'src/ticket/ticket.service';
 import { Session } from 'src/util/session';
 import { Ticket } from 'src/util/ticket';
 import { VisualizationMode } from 'src/util/visualization-mode';
-import { ChatService } from 'src/chat/chat.service';
-import { ChatSynchronizeResponse } from 'src/message/client/sendable/chat-sync-response';
-import {
-  USER_MUTE_EVENT,
-  UserMuteUpdate,
-} from 'src/message/client/receivable/mute-update-message';
-import {
-  USER_KICK_EVENT,
-  UserKickEvent,
-} from 'src/message/client/receivable/user-kick-event';
-import {
-  MESSAGE_DELETE_EVENT,
-  MessageDeleteEvent,
-} from 'src/message/client/receivable/delete-message';
-import {
-  IMMERSIVE_VIEW_UPDATE_EVENT,
-  ImmersiveViewUpdateMessage,
-} from 'src/message/client/receivable/immersive-view-update-message';
 
 @WebSocketGateway({ cors: true })
 export class WebsocketGateway
@@ -308,7 +300,7 @@ export class WebsocketGateway
 
     const message: UserDisconnectedMessage = {
       id: session.getUser().getId(),
-      highlightedComponents: session.getUser().getHighlightedEntities(),
+      highlightedEntityIds: session.getUser().getHighlightedEntities(),
     };
     this.publisherService.publishRoomStatusMessage(
       USER_DISCONNECTED_EVENT,
@@ -538,22 +530,6 @@ export class WebsocketGateway
       client,
       message.nonce,
       response,
-    );
-  }
-
-  @SubscribeMessage(APP_OPENED_EVENT)
-  handleAppOpenedMessage(
-    @MessageBody() message: AppOpenedMessage,
-    @ConnectedSocket() client: Socket,
-  ): void {
-    const roomMessage =
-      this.messageFactoryService.makeRoomForwardMessage<AppOpenedMessage>(
-        client,
-        message,
-      );
-    this.publisherService.publishRoomForwardMessage(
-      APP_OPENED_EVENT,
-      roomMessage,
     );
   }
 
@@ -1004,43 +980,6 @@ export class WebsocketGateway
     this.publisherService.publishRoomForwardMessage(
       MESSAGE_DELETE_EVENT,
       roomMessage,
-    );
-  }
-
-  @SubscribeMessage(APP_CLOSED_EVENT)
-  async handleAppClosedMessage(
-    @MessageBody() message: AppClosedMessage,
-    @ConnectedSocket() client: Socket,
-  ): Promise<void> {
-    const session = this.sessionService.lookupSession(client);
-    const object = session
-      .getRoom()
-      .getGrabModifier()
-      .getGrabbableObject(message.appId);
-    let success = false;
-    if (object) {
-      success = await this.lockService.closeGrabbableObject(
-        session.getRoom(),
-        object,
-      );
-      if (success) {
-        const roomMessage =
-          this.messageFactoryService.makeRoomForwardMessage<AppClosedMessage>(
-            client,
-            message,
-          );
-        this.publisherService.publishRoomForwardMessage(
-          APP_CLOSED_EVENT,
-          roomMessage,
-        );
-      }
-    }
-    const response: ObjectClosedResponse = { isSuccess: success };
-    this.sendResponse(
-      OBJECT_CLOSED_RESPONSE_EVENT,
-      client,
-      message.nonce,
-      response,
     );
   }
 

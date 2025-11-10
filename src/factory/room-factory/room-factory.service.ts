@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Room } from 'src/model/room-model';
 import { AnnotationModifier } from 'src/modifier/annotation-modifier';
-import { ApplicationModifier } from 'src/modifier/application-modifier';
 import { ColorModifier } from 'src/modifier/color-modifier';
 import { DetachedMenuModifier } from 'src/modifier/detached-menu-modifier';
 import { GrabModifier } from 'src/modifier/grab-modifier';
@@ -21,13 +20,11 @@ export class RoomFactoryService {
     const detachedMenuModifier = new DetachedMenuModifier(grabModifier);
     const annotationModifier = new AnnotationModifier(grabModifier);
     const heatmapModifier = new HeatmapModifier();
-    const applicationModifier = new ApplicationModifier(grabModifier);
 
     return new Room(
       roomId,
       roomName,
       userModifier,
-      applicationModifier,
       landscapeModifier,
       detachedMenuModifier,
       annotationModifier,

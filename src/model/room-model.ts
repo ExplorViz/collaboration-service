@@ -1,5 +1,4 @@
 import { AnnotationModifier } from 'src/modifier/annotation-modifier';
-import { ApplicationModifier } from 'src/modifier/application-modifier';
 import { ColorModifier } from 'src/modifier/color-modifier';
 import { DetachedMenuModifier } from 'src/modifier/detached-menu-modifier';
 import { GrabModifier } from 'src/modifier/grab-modifier';
@@ -17,7 +16,6 @@ export class Room {
   private readonly roomName: string;
 
   private readonly userModifier: UserModifier;
-  private readonly applicationModifier: ApplicationModifier;
   private readonly landscapeModifier: LandscapeModifier;
   private readonly detachedMenuModifier: DetachedMenuModifier;
   private readonly annotationModifier: AnnotationModifier;
@@ -29,7 +27,6 @@ export class Room {
     roomId: string,
     roomName: string,
     userModifier: UserModifier,
-    applicationModifier: ApplicationModifier,
     landscapeModifier: LandscapeModifier,
     detachedMenuModifier: DetachedMenuModifier,
     annotationModifier: AnnotationModifier,
@@ -40,7 +37,6 @@ export class Room {
     this.roomId = roomId;
     this.roomName = roomName;
     this.userModifier = userModifier;
-    this.applicationModifier = applicationModifier;
     this.landscapeModifier = landscapeModifier;
     this.detachedMenuModifier = detachedMenuModifier;
     this.annotationModifier = annotationModifier;
@@ -59,10 +55,6 @@ export class Room {
 
   getUserModifier(): UserModifier {
     return this.userModifier;
-  }
-
-  getApplicationModifier(): ApplicationModifier {
-    return this.applicationModifier;
   }
 
   getLandscapeModifier(): LandscapeModifier {
@@ -97,7 +89,6 @@ export class Room {
       return;
     }
     this.getLandscapeModifier().setLandscapeToken(landscapeToken);
-    this.getApplicationModifier().clear();
     this.getGrabModifier().clear();
     this.getHeatmapModifier().clear();
   }
