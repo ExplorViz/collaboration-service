@@ -53,17 +53,13 @@ import {
   MenuDetachedMessage,
 } from 'src/message/client/receivable/menu-detached-message';
 import {
-  MOUSE_PING_UPDATE_EVENT,
-  MousePingUpdateMessage,
-} from 'src/message/client/receivable/mouse-ping-update-message';
+  PING_UPDATE_EVENT,
+  PingUpdateMessage,
+} from 'src/message/client/receivable/ping-update-message';
 import {
   OBJECT_MOVED_EVENT,
   ObjectMovedMessage,
 } from 'src/message/client/receivable/object-moved-message';
-import {
-  PING_UPDATE_EVENT,
-  PingUpdateMessage,
-} from 'src/message/client/receivable/ping-update-message';
 import {
   SHARE_SETTINGS_EVENT,
   ShareSettingsMessage,
@@ -167,9 +163,6 @@ export class SubscriberService {
     );
     listener.set(ALL_HIGHLIGHTS_RESET_EVENT, (msg: any) =>
       this.handleAllHighlightsResetEvent(ALL_HIGHLIGHTS_RESET_EVENT, msg),
-    );
-    listener.set(MOUSE_PING_UPDATE_EVENT, (msg: any) =>
-      this.handleMousePingUpdateEvent(MOUSE_PING_UPDATE_EVENT, msg),
     );
     listener.set(PING_UPDATE_EVENT, (msg: any) =>
       this.handlePingUpdateEvent(PING_UPDATE_EVENT, msg),
@@ -559,18 +552,6 @@ export class SubscriberService {
     const room = this.roomService.lookupRoom(roomMessage.roomId);
     const message = roomMessage.message;
     room.getUserModifier().resetAllHighlights();
-    this.websocketGateway.sendBroadcastForwardedMessage(
-      event,
-      roomMessage.roomId,
-      { userId: roomMessage.userId, originalMessage: message },
-    );
-  }
-
-  private handleMousePingUpdateEvent(
-    event: string,
-    roomMessage: RoomForwardMessage<MousePingUpdateMessage>,
-  ) {
-    const message = roomMessage.message;
     this.websocketGateway.sendBroadcastForwardedMessage(
       event,
       roomMessage.roomId,

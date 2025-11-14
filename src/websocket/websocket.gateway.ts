@@ -74,9 +74,9 @@ import {
   MenuDetachedMessage,
 } from 'src/message/client/receivable/menu-detached-message';
 import {
-  MOUSE_PING_UPDATE_EVENT,
-  MousePingUpdateMessage,
-} from 'src/message/client/receivable/mouse-ping-update-message';
+  PING_UPDATE_EVENT,
+  PingUpdateMessage,
+} from 'src/message/client/receivable/ping-update-message';
 import {
   USER_MUTE_EVENT,
   UserMuteUpdate,
@@ -93,10 +93,6 @@ import {
   OBJECT_RELEASED_EVENT,
   ObjectReleasedMessage,
 } from 'src/message/client/receivable/object-released-message';
-import {
-  PING_UPDATE_EVENT,
-  PingUpdateMessage,
-} from 'src/message/client/receivable/ping-update-message';
 import {
   ALL_HIGHLIGHTS_RESET_EVENT,
   AllHighlightsResetMessage,
@@ -645,24 +641,8 @@ export class WebsocketGateway
     this.publisherService.publishRoomForwardMessage(JOIN_VR_EVENT, roomMessage);
   }
 
-  @SubscribeMessage(MOUSE_PING_UPDATE_EVENT)
-  handleMousePingUpdateMessage(
-    @MessageBody() message: MousePingUpdateMessage,
-    @ConnectedSocket() client: Socket,
-  ): void {
-    const roomMessage =
-      this.messageFactoryService.makeRoomForwardMessage<MousePingUpdateMessage>(
-        client,
-        message,
-      );
-    this.publisherService.publishRoomForwardMessage(
-      MOUSE_PING_UPDATE_EVENT,
-      roomMessage,
-    );
-  }
-
   @SubscribeMessage(PING_UPDATE_EVENT)
-  handlePingUpdateMessage(
+  handleMousePingUpdateMessage(
     @MessageBody() message: PingUpdateMessage,
     @ConnectedSocket() client: Socket,
   ): void {

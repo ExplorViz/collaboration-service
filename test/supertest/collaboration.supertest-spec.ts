@@ -4,14 +4,11 @@ import { ANNOTATION_CLOSED_EVENT } from 'src/message/client/receivable/annotatio
 import { ANNOTATION_EDIT_EVENT } from 'src/message/client/receivable/annotation-edit-message';
 import { ANNOTATION_OPENED_EVENT } from 'src/message/client/receivable/annotation-opened-message';
 import { ANNOTATION_UPDATED_EVENT } from 'src/message/client/receivable/annotation-updated-message';
-import { APP_CLOSED_EVENT } from 'src/message/client/receivable/app-closed-message';
-import { APP_OPENED_EVENT } from 'src/message/client/receivable/app-opened-message';
 import { COMPONENT_UPDATE_EVENT } from 'src/message/client/receivable/component-update-message';
 import { DETACHED_MENU_CLOSED_EVENT } from 'src/message/client/receivable/detached-menu-closed-message';
 import { HEATMAP_UPDATE_EVENT } from 'src/message/client/receivable/heatmap-update-message';
 import { HIGHLIGHTING_UPDATE_EVENT } from 'src/message/client/receivable/highlighting-update-message';
 import { MENU_DETACHED_EVENT } from 'src/message/client/receivable/menu-detached-message';
-import { MOUSE_PING_UPDATE_EVENT } from 'src/message/client/receivable/mouse-ping-update-message';
 import { OBJECT_GRABBED_EVENT } from 'src/message/client/receivable/object-grabbed-message';
 import { OBJECT_MOVED_EVENT } from 'src/message/client/receivable/object-moved-message';
 import { OBJECT_RELEASED_EVENT } from 'src/message/client/receivable/object-released-message';
@@ -34,12 +31,9 @@ const initialRoomPayload = require('test/payload/initial-room.json');
 const joinLobbyPayload = require('test/payload/join-lobby.json');
 const highlightingUpdatePayload = require('test/payload/highlighting-update.json');
 const componentOpenPayload = require('test/payload/component-update-open.json');
-const mousePingPayload = require('test/payload/mouse-ping-update.json');
+const pingPayload = require('test/payload/ping-update.json');
 const spectatePayload = require('test/payload/spectating-update.json');
 const heatmapPayload = require('test/payload/heatmap-update.json');
-const controllerPingPayload = require('test/payload/ping-update.json');
-const appOpenedPayload = require('test/payload/app-opened.json');
-const appClosedPayload = require('test/payload/app-closed.json');
 const componentClosePayload = require('test/payload/component-update-close.json');
 const timestamtPayload = require('test/payload/timestamp-update.json');
 const menuDetachedPayload = require('test/payload/menu-detached.json');
@@ -278,19 +272,19 @@ describe('collaboration', () => {
     });
   });
 
-  it('mouse ping', async () => {
+  it('ping update', async () => {
     return new Promise<void>(async (resolve, reject) => {
-      client2.socket.on(MOUSE_PING_UPDATE_EVENT, (msg) => {
+      client2.socket.on(PING_UPDATE_EVENT, (msg) => {
         // forwarded message is correct
         expect(msg).toStrictEqual({
           userId: client1.id,
-          originalMessage: mousePingPayload,
+          originalMessage: pingPayload,
         });
         resolve();
       });
 
       // mouse ping
-      client1.socket.emit(MOUSE_PING_UPDATE_EVENT, mousePingPayload);
+      client1.socket.emit(PING_UPDATE_EVENT, pingPayload);
 
       // timeout
       await sleep(500);
@@ -334,46 +328,6 @@ describe('collaboration', () => {
 
       // update heatmap
       client1.socket.emit(HEATMAP_UPDATE_EVENT, heatmapPayload);
-
-      // timeout
-      await sleep(500);
-      reject(new Error('No message received'));
-    });
-  });
-
-  it('controller ping', async () => {
-    return new Promise<void>(async (resolve, reject) => {
-      client2.socket.on(PING_UPDATE_EVENT, (msg) => {
-        // forwarded message is correct
-        expect(msg).toStrictEqual({
-          userId: client1.id,
-          originalMessage: controllerPingPayload,
-        });
-        resolve();
-      });
-
-      // ping
-      client1.socket.emit(PING_UPDATE_EVENT, controllerPingPayload);
-
-      // timeout
-      await sleep(500);
-      reject(new Error('No message received'));
-    });
-  });
-
-  it('open app', async () => {
-    return new Promise<void>(async (resolve, reject) => {
-      client2.socket.on(APP_OPENED_EVENT, (msg) => {
-        // forwarded message is correct
-        expect(msg).toStrictEqual({
-          userId: client1.id,
-          originalMessage: appOpenedPayload,
-        });
-        resolve();
-      });
-
-      // open app
-      client1.socket.emit(APP_OPENED_EVENT, appOpenedPayload);
 
       // timeout
       await sleep(500);
@@ -729,9 +683,6 @@ describe('collaboration', () => {
 
       // grabbing was successful
       expect(isSuccess).toStrictEqual(true);
-
-      // client2 closes object
-      client2.socket.emit(APP_CLOSED_EVENT, appClosedPayload);
 
       // timeout
       await sleep(500);
