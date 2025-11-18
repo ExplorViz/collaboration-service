@@ -35,7 +35,7 @@ const pingPayload = require('test/payload/ping-update.json');
 const spectatePayload = require('test/payload/spectating-update.json');
 const heatmapPayload = require('test/payload/heatmap-update.json');
 const componentClosePayload = require('test/payload/component-update-close.json');
-const timestamtPayload = require('test/payload/timestamp-update.json');
+const timestampPayload = require('test/payload/timestamp-update.json');
 const menuDetachedPayload = require('test/payload/menu-detached.json');
 const annotationPayload = require('test/payload/annotation.json');
 const closeMenuDetachedPayload = require('test/payload/detached-menu-closed.json');
@@ -369,13 +369,13 @@ describe('collaboration', () => {
         // forwarded message is correct
         expect(msg).toStrictEqual({
           userId: client1.id,
-          originalMessage: timestamtPayload,
+          originalMessage: timestampPayload,
         });
         resolve();
       });
 
       // update timestamp
-      client1.socket.emit(TIMESTAMP_UPDATE_EVENT, timestamtPayload);
+      client1.socket.emit(TIMESTAMP_UPDATE_EVENT, timestampPayload);
 
       await sleep(500);
       reject(new Error('No message received'));
