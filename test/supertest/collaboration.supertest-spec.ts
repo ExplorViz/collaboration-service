@@ -611,23 +611,49 @@ describe('collaboration', () => {
 
   it('move object', async () => {
     return new Promise<void>(async (resolve, reject) => {
+      // First, create a detached menu to get an objectId
+      let objectId: string;
+
+      // Set up listener for menu detached event before emitting
+      const menuAddedPromise = new Promise<void>((menuAddedResolve) => {
+        client2.socket.once(MENU_DETACHED_EVENT, () => {
+          menuAddedResolve();
+        });
+      });
+
+      await new Promise<void>((menuResolve) => {
+        client1.socket.on(MENU_DETACHED_RESPONSE_EVENT, (msg) => {
+          objectId = msg.response.objectId;
+          menuResolve();
+        });
+        client1.socket.emit(MENU_DETACHED_EVENT, menuDetachedPayload);
+      });
+
+      // Wait for the menu to be added to the grab modifier via Redis pub/sub
+      // The MENU_DETACHED_EVENT is broadcast after the menu is added
+      await menuAddedPromise;
+
+      // Update payloads with the actual objectId
+      const grabPayload = { ...grabObjectPayload, objectId };
+      const movePayload = { ...moveObjectPayload, objectId };
+
       let isSuccess: boolean;
       client1.socket.on(OBJECT_GRABBED_RESPONSE_EVENT, (msg) => {
         // nonce is correct
-        expect(msg.nonce).toStrictEqual(grabObjectPayload.nonce);
+        expect(msg.nonce).toStrictEqual(grabPayload.nonce);
         isSuccess = msg.response.isSuccess;
       });
       client2.socket.on(OBJECT_MOVED_EVENT, (msg) => {
         // forwarded message is correct
         expect(msg).toStrictEqual({
           userId: client1.id,
-          originalMessage: moveObjectPayload,
+          originalMessage: movePayload,
         });
         resolve();
       });
 
       // grab object
-      client1.socket.emit(OBJECT_GRABBED_EVENT, grabObjectPayload);
+      client1.socket.emit(OBJECT_GRABBED_EVENT, grabPayload);
 
       await sleep(500);
 
@@ -635,7 +661,7 @@ describe('collaboration', () => {
       expect(isSuccess).toStrictEqual(true);
 
       // move object
-      client1.socket.emit(OBJECT_MOVED_EVENT, moveObjectPayload);
+      client1.socket.emit(OBJECT_MOVED_EVENT, movePayload);
 
       // timeout
       await sleep(500);
@@ -645,6 +671,31 @@ describe('collaboration', () => {
 
   it('object can be grabbed by one user only', async () => {
     return new Promise<void>(async (resolve, reject) => {
+      // First, create a detached menu to get an objectId
+      let objectId: string;
+
+      // Set up listener for menu detached event before emitting
+      const menuAddedPromise = new Promise<void>((menuAddedResolve) => {
+        client2.socket.once(MENU_DETACHED_EVENT, () => {
+          menuAddedResolve();
+        });
+      });
+
+      await new Promise<void>((menuResolve) => {
+        client1.socket.on(MENU_DETACHED_RESPONSE_EVENT, (msg) => {
+          objectId = msg.response.objectId;
+          menuResolve();
+        });
+        client1.socket.emit(MENU_DETACHED_EVENT, menuDetachedPayload);
+      });
+
+      // Wait for the menu to be added to the grab modifier via Redis pub/sub
+      // The MENU_DETACHED_EVENT is broadcast after the menu is added
+      await menuAddedPromise;
+
+      // Update payload with the actual objectId
+      const grabPayload = { ...grabObjectPayload, objectId };
+
       let isSuccess: boolean;
       client1.socket.on(OBJECT_GRABBED_RESPONSE_EVENT, (msg) => {
         isSuccess = msg.response.isSuccess;
@@ -656,7 +707,7 @@ describe('collaboration', () => {
       });
 
       // client1 grabs object
-      client1.socket.emit(OBJECT_GRABBED_EVENT, grabObjectPayload);
+      client1.socket.emit(OBJECT_GRABBED_EVENT, grabPayload);
 
       await sleep(500);
 
@@ -664,7 +715,7 @@ describe('collaboration', () => {
       expect(isSuccess).toStrictEqual(true);
 
       // client2 grabs object
-      client2.socket.emit(OBJECT_GRABBED_EVENT, grabObjectPayload);
+      client2.socket.emit(OBJECT_GRABBED_EVENT, grabPayload);
 
       // timeout
       await sleep(500);
@@ -674,6 +725,32 @@ describe('collaboration', () => {
 
   it('grabbed object cannot be closed', async () => {
     return new Promise<void>(async (resolve, reject) => {
+      // First, create a detached menu to get an objectId
+      let objectId: string;
+
+      // Set up listener for menu detached event before emitting
+      const menuAddedPromise = new Promise<void>((menuAddedResolve) => {
+        client2.socket.once(MENU_DETACHED_EVENT, () => {
+          menuAddedResolve();
+        });
+      });
+
+      await new Promise<void>((menuResolve) => {
+        client1.socket.on(MENU_DETACHED_RESPONSE_EVENT, (msg) => {
+          objectId = msg.response.objectId;
+          menuResolve();
+        });
+        client1.socket.emit(MENU_DETACHED_EVENT, menuDetachedPayload);
+      });
+
+      // Wait for the menu to be added to the grab modifier via Redis pub/sub
+      // The MENU_DETACHED_EVENT is broadcast after the menu is added
+      await menuAddedPromise;
+
+      // Update payloads with the actual objectId
+      const grabPayload = { ...grabObjectPayload, objectId };
+      const closePayload = { ...closeMenuDetachedPayload, menuId: objectId };
+
       let isSuccess: boolean;
       client1.socket.on(OBJECT_GRABBED_RESPONSE_EVENT, (msg) => {
         isSuccess = msg.response.isSuccess;
@@ -685,12 +762,15 @@ describe('collaboration', () => {
       });
 
       // client1 grabs object
-      client1.socket.emit(OBJECT_GRABBED_EVENT, grabObjectPayload);
+      client1.socket.emit(OBJECT_GRABBED_EVENT, grabPayload);
 
       await sleep(500);
 
       // grabbing was successful
       expect(isSuccess).toStrictEqual(true);
+
+      // client2 tries to close the grabbed object
+      client2.socket.emit(DETACHED_MENU_CLOSED_EVENT, closePayload);
 
       // timeout
       await sleep(500);
@@ -700,13 +780,27 @@ describe('collaboration', () => {
 
   it('released object can be grabbed again', async () => {
     return new Promise<void>(async (resolve, reject) => {
+      // First, create a detached menu to get an objectId
+      let objectId: string;
+      await new Promise<void>((menuResolve) => {
+        client1.socket.on(MENU_DETACHED_RESPONSE_EVENT, (msg) => {
+          objectId = msg.response.objectId;
+          menuResolve();
+        });
+        client1.socket.emit(MENU_DETACHED_EVENT, menuDetachedPayload);
+      });
+
+      // Update payloads with the actual objectId
+      const grabPayload = { ...grabObjectPayload, objectId };
+      const releasePayload = { ...releaseObjectPayload, objectId };
+
       // grab object
-      client1.socket.emit(OBJECT_GRABBED_EVENT, grabObjectPayload);
+      client1.socket.emit(OBJECT_GRABBED_EVENT, grabPayload);
 
       await sleep(500);
 
       // release object
-      client1.socket.emit(OBJECT_RELEASED_EVENT, releaseObjectPayload);
+      client1.socket.emit(OBJECT_RELEASED_EVENT, releasePayload);
 
       await sleep(500);
 
@@ -717,7 +811,7 @@ describe('collaboration', () => {
       });
 
       // grab object again
-      client1.socket.emit(OBJECT_GRABBED_EVENT, grabObjectPayload);
+      client1.socket.emit(OBJECT_GRABBED_EVENT, grabPayload);
 
       // timeout
       await sleep(500);
