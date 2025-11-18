@@ -299,6 +299,34 @@ export class SubscriberService {
         publishedLandscape.timestamp,
       );
 
+    // Restore closed components
+    if (roomMessage.message.closedComponentIds) {
+      room
+        .getLandscapeModifier()
+        .updateComponents(roomMessage.message.closedComponentIds, false);
+    }
+
+    // Reset all highlights first
+    room.getUserModifier().resetAllHighlights();
+
+    // Restore highlighted entities per user
+    if (roomMessage.message.highlightedEntities) {
+      const highlightedByUser = new Map<string, string[]>();
+      for (const highlighting of roomMessage.message.highlightedEntities) {
+        if (!highlightedByUser.has(highlighting.userId)) {
+          highlightedByUser.set(highlighting.userId, []);
+        }
+        highlightedByUser.get(highlighting.userId)!.push(highlighting.entityId);
+      }
+
+      for (const [userId, entityIds] of highlightedByUser.entries()) {
+        const user = room.getUserModifier().getUserById(userId);
+        if (user) {
+          room.getUserModifier().updateHighlighting(user, entityIds, true);
+        }
+      }
+    }
+
     room.getDetachedMenuModifier().closeAllDetachedMenus();
 
     room.getAnnotationModifier().closeAllAnnotations();

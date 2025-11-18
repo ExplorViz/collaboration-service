@@ -189,6 +189,14 @@ describe('room', () => {
       socket.on(INITIAL_LANDSCAPE_EVENT, (msg) => {
         // correct landscape was received
         expect(msg.landscape).toStrictEqual(initialRoomPayload.landscape);
+        expect(msg).toHaveProperty('closedComponents');
+        expect(msg).toHaveProperty('highlightedEntities');
+        expect(Array.isArray(msg.closedComponents)).toBe(true);
+        expect(Array.isArray(msg.highlightedEntities)).toBe(true);
+        if (msg.highlightedEntities.length > 0) {
+          expect(msg.highlightedEntities[0]).toHaveProperty('userId');
+          expect(msg.highlightedEntities[0]).toHaveProperty('entityId');
+        }
         socket.disconnect();
         resolve();
       });

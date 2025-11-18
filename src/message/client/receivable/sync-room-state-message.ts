@@ -9,7 +9,7 @@ export const SYNC_ROOM_STATE_EVENT = 'sync_room_state';
 
 export type SyncRoomStateMessage = {
   landscape: Landscape;
-  closedComponents: string[];
+  closedComponentIds: string[];
   highlightedEntities: UserHighlighting[];
   detachedMenus: PublishedDetachedMenu[];
   annotations: PublishedAnnotation[];
