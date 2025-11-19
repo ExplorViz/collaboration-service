@@ -8,6 +8,8 @@ export class LandscapeModel
   private landscapeToken: string;
   private timestamp: number;
 
+  private closedComponents: Set<string> = new Set();
+
   constructor(id: string) {
     super(id);
   }
@@ -30,5 +32,21 @@ export class LandscapeModel
 
   getGrabId(): string {
     return this.landscapeToken;
+  }
+
+  openComponents(ids: string[]): void {
+    this.closedComponents = this.closedComponents.difference(new Set(ids));
+  }
+
+  closeComponents(ids: string[]): void {
+    this.closedComponents = this.closedComponents.union(new Set(ids));
+  }
+
+  openAllComponents(): void {
+    this.closedComponents.clear();
+  }
+
+  getClosedComponents(): string[] {
+    return Array.from(this.closedComponents);
   }
 }

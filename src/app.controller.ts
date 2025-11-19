@@ -65,7 +65,7 @@ export class AppController {
   ): Promise<RoomCreatedResponse> {
     const roomId = body.roomId
       ? body.roomId
-      : await this.idGenerationService.nextId();
+      : await this.idGenerationService.nextRoomId();
 
     if (this.roomService.lookupRoom(roomId)) {
       return { roomId };
@@ -102,7 +102,6 @@ export class AppController {
       roomId,
       initialRoom: {
         landscape: landscape,
-        openApps: body.openApps,
         detachedMenus: detachedMenus,
         annotations: annotations,
       },

@@ -3,7 +3,7 @@ import { RedisClientType } from 'redis';
 import {
   ALL_HIGHLIGHTS_RESET_EVENT,
   AllHighlightsResetMessage,
-} from 'src/message/client/receivable/all-highlights-reset-message';
+} from 'src/message/client/receivable/reset-highlighting-message';
 import {
   ANNOTATION_CLOSED_EVENT,
   AnnotationClosedMessage,
@@ -16,14 +16,6 @@ import {
   ANNOTATION_UPDATED_EVENT,
   AnnotationUpdatedMessage,
 } from 'src/message/client/receivable/annotation-updated-message';
-import {
-  APP_CLOSED_EVENT,
-  AppClosedMessage,
-} from 'src/message/client/receivable/app-closed-message';
-import {
-  APP_OPENED_EVENT,
-  AppOpenedMessage,
-} from 'src/message/client/receivable/app-opened-message';
 import {
   CHANGE_LANDSCAPE_EVENT,
   ChangeLandscapeMessage,
@@ -61,17 +53,13 @@ import {
   MenuDetachedMessage,
 } from 'src/message/client/receivable/menu-detached-message';
 import {
-  MOUSE_PING_UPDATE_EVENT,
-  MousePingUpdateMessage,
-} from 'src/message/client/receivable/mouse-ping-update-message';
+  PING_UPDATE_EVENT,
+  PingUpdateMessage,
+} from 'src/message/client/receivable/ping-update-message';
 import {
   OBJECT_MOVED_EVENT,
   ObjectMovedMessage,
 } from 'src/message/client/receivable/object-moved-message';
-import {
-  PING_UPDATE_EVENT,
-  PingUpdateMessage,
-} from 'src/message/client/receivable/ping-update-message';
 import {
   SHARE_SETTINGS_EVENT,
   ShareSettingsMessage,
@@ -158,9 +146,6 @@ export class SubscriberService {
     listener.set(ANNOTATION_OPENED_EVENT, (msg: any) =>
       this.handleAnnotationEvent(ANNOTATION_OPENED_EVENT, msg),
     );
-    listener.set(APP_OPENED_EVENT, (msg: any) =>
-      this.handleAppOpenedEvent(APP_OPENED_EVENT, msg),
-    );
     listener.set(CHANGE_LANDSCAPE_EVENT, (msg: any) =>
       this.handleChangeLandscapeEvent(CHANGE_LANDSCAPE_EVENT, msg),
     );
@@ -178,9 +163,6 @@ export class SubscriberService {
     );
     listener.set(ALL_HIGHLIGHTS_RESET_EVENT, (msg: any) =>
       this.handleAllHighlightsResetEvent(ALL_HIGHLIGHTS_RESET_EVENT, msg),
-    );
-    listener.set(MOUSE_PING_UPDATE_EVENT, (msg: any) =>
-      this.handleMousePingUpdateEvent(MOUSE_PING_UPDATE_EVENT, msg),
     );
     listener.set(PING_UPDATE_EVENT, (msg: any) =>
       this.handlePingUpdateEvent(PING_UPDATE_EVENT, msg),
@@ -211,9 +193,6 @@ export class SubscriberService {
     );
     listener.set(OBJECT_MOVED_EVENT, (msg: any) =>
       this.handleObjectMovedEvent(OBJECT_MOVED_EVENT, msg),
-    );
-    listener.set(APP_CLOSED_EVENT, (msg: any) =>
-      this.handleAppClosedEvent(APP_CLOSED_EVENT, msg),
     );
     listener.set(DETACHED_MENU_CLOSED_EVENT, (msg: any) =>
       this.handleDetachedMenuClosedEvent(DETACHED_MENU_CLOSED_EVENT, msg),
@@ -257,7 +236,7 @@ export class SubscriberService {
   private handleCreateRoomEvent(message: CreateRoomMessage) {
     const publishedLandscape = message.initialRoom.landscape;
 
-    // Initiliaze room and landscape
+    // Initialize room and landscape
     const room = this.roomService.createRoom(
       message.roomId,
       publishedLandscape.id,
@@ -268,18 +247,6 @@ export class SubscriberService {
         publishedLandscape.landscape.landscapeToken,
         publishedLandscape.landscape.timestamp,
       );
-
-    // Initialize apps and components
-    for (const app of message.initialRoom.openApps) {
-      room
-        .getApplicationModifier()
-        .openApplication(app.id, app.position, app.quaternion, app.scale);
-      for (const componentId of app.openComponents) {
-        room
-          .getApplicationModifier()
-          .updateComponent(componentId, app.id, false, true);
-      }
-    }
 
     // Initialize detached menus
     for (const detachedMenu of message.initialRoom.detachedMenus) {
@@ -332,17 +299,31 @@ export class SubscriberService {
         publishedLandscape.timestamp,
       );
 
-    room.getApplicationModifier().closeAllApplications();
-
-    // Initialize apps and components
-    for (const app of roomMessage.message.openApps) {
+    // Restore closed components
+    if (roomMessage.message.closedComponentIds) {
       room
-        .getApplicationModifier()
-        .openApplication(app.id, app.position, app.quaternion, app.scale);
-      for (const componentId of app.openComponents) {
-        room
-          .getApplicationModifier()
-          .updateComponent(componentId, app.id, false, true);
+        .getLandscapeModifier()
+        .updateComponents(roomMessage.message.closedComponentIds, false);
+    }
+
+    // Reset all highlights first
+    room.getUserModifier().resetAllHighlights();
+
+    // Restore highlighted entities per user
+    if (roomMessage.message.highlightedEntities) {
+      const highlightedByUser = new Map<string, string[]>();
+      for (const highlighting of roomMessage.message.highlightedEntities) {
+        if (!highlightedByUser.has(highlighting.userId)) {
+          highlightedByUser.set(highlighting.userId, []);
+        }
+        highlightedByUser.get(highlighting.userId)!.push(highlighting.entityId);
+      }
+
+      for (const [userId, entityIds] of highlightedByUser.entries()) {
+        const user = room.getUserModifier().getUserById(userId);
+        if (user) {
+          room.getUserModifier().updateHighlighting(user, entityIds, true);
+        }
       }
     }
 
@@ -519,27 +500,6 @@ export class SubscriberService {
     );
   }
 
-  private handleAppOpenedEvent(
-    event: string,
-    roomMessage: RoomForwardMessage<AppOpenedMessage>,
-  ) {
-    const room = this.roomService.lookupRoom(roomMessage.roomId);
-    const message = roomMessage.message;
-    room
-      .getApplicationModifier()
-      .openApplication(
-        message.id,
-        message.position,
-        message.quaternion,
-        message.scale,
-      );
-    this.websocketGateway.sendBroadcastForwardedMessage(
-      event,
-      roomMessage.roomId,
-      { userId: roomMessage.userId, originalMessage: message },
-    );
-  }
-
   private handleChangeLandscapeEvent(
     event: string,
     roomMessage: RoomForwardMessage<ChangeLandscapeMessage>,
@@ -558,13 +518,8 @@ export class SubscriberService {
     const room = this.roomService.lookupRoom(roomMessage.roomId);
     const message = roomMessage.message;
     room
-      .getApplicationModifier()
-      .updateComponent(
-        message.componentId,
-        message.appId,
-        message.isFoundation,
-        message.isOpened,
-      );
+      .getLandscapeModifier()
+      .updateComponents(message.componentIds, message.areOpened);
     this.websocketGateway.sendBroadcastForwardedMessage(
       event,
       roomMessage.roomId,
@@ -598,14 +553,7 @@ export class SubscriberService {
     const message = roomMessage.message;
     room
       .getUserModifier()
-      .updateHighlighting(
-        user,
-        message.appId,
-        message.entityId,
-        message.entityType,
-        message.isHighlighted,
-        message.multiSelected,
-      );
+      .updateHighlighting(user, message.entityIds, message.areHighlighted);
     this.websocketGateway.sendBroadcastForwardedMessage(
       event,
       roomMessage.roomId,
@@ -632,18 +580,6 @@ export class SubscriberService {
     const room = this.roomService.lookupRoom(roomMessage.roomId);
     const message = roomMessage.message;
     room.getUserModifier().resetAllHighlights();
-    this.websocketGateway.sendBroadcastForwardedMessage(
-      event,
-      roomMessage.roomId,
-      { userId: roomMessage.userId, originalMessage: message },
-    );
-  }
-
-  private handleMousePingUpdateEvent(
-    event: string,
-    roomMessage: RoomForwardMessage<MousePingUpdateMessage>,
-  ) {
-    const message = roomMessage.message;
     this.websocketGateway.sendBroadcastForwardedMessage(
       event,
       roomMessage.roomId,
@@ -711,7 +647,6 @@ export class SubscriberService {
     const room = this.roomService.lookupRoom(roomMessage.roomId);
     const message = roomMessage.message;
     room.getLandscapeModifier().updateTimestamp(message.timestamp);
-    room.getApplicationModifier().closeAllApplications();
     room.getDetachedMenuModifier().closeAllDetachedMenus();
     this.websocketGateway.sendBroadcastForwardedMessage(
       event,
@@ -789,20 +724,6 @@ export class SubscriberService {
         message.quaternion,
         message.scale,
       );
-    this.websocketGateway.sendBroadcastForwardedMessage(
-      event,
-      roomMessage.roomId,
-      { userId: roomMessage.userId, originalMessage: message },
-    );
-  }
-
-  private handleAppClosedEvent(
-    event: string,
-    roomMessage: RoomForwardMessage<AppClosedMessage>,
-  ) {
-    const room = this.roomService.lookupRoom(roomMessage.roomId);
-    const message = roomMessage.message;
-    room.getApplicationModifier().closeApplication(message.appId);
     this.websocketGateway.sendBroadcastForwardedMessage(
       event,
       roomMessage.roomId,

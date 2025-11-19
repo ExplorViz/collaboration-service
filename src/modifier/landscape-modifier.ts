@@ -40,4 +40,12 @@ export class LandscapeModifier {
     this.landscape.setQuaternion([-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)]);
     this.landscape.setScale(LandscapeModifier.LANDSCAPE_CENTER_SCALE);
   }
+
+  updateComponents(componentIds: string[], areOpened: boolean): void {
+    if (areOpened) {
+      this.landscape.openComponents(componentIds);
+    } else {
+      this.landscape.closeComponents(componentIds);
+    }
+  }
 }
